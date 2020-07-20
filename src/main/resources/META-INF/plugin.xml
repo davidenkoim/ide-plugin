@@ -1,0 +1,9 @@
+<idea-plugin>
+    <id>com.github.davidenkoim.idnamessuggestingplugin</id>
+    <name>Id Names Suggesting</name>
+    <vendor>davidenkoim</vendor>
+
+    <!-- Product and plugin compatibility requirements -->
+    <!-- https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+</idea-plugin>
