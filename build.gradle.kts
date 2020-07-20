@@ -91,12 +91,6 @@ tasks {
         sinceBuild(pluginSinceBuild)
         untilBuild(pluginUntilBuild)
 
-        // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
-        pluginDescription(closure {
-            File("./README.md").readText().lines().run {
-                subList(indexOf("<!-- Plugin description -->") + 1, indexOf("<!-- Plugin description end -->"))
-            }.joinToString("\n").run { markdownToHTML(this) }
-        })
 
         // Get the latest available change notes from the changelog file
         changeNotes(closure {
