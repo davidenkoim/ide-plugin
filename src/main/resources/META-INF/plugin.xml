@@ -16,9 +16,10 @@
     <depends>com.intellij.modules.platform</depends>
     <actions>
         <action id="org.jetbrains.id.names.suggesting.DeclarationAction"
-                class="org.jetbrains.id.names.suggesting.DeclarationAction" text="Suggest Identifier's Name"
-                description="Suggest variable's name">
+                class="org.jetbrains.id.names.suggesting.DeclarationAction" text="Suggest Identifier&#39;s Name"
+                description="Suggest variable&#39;s name">
             <add-to-group group-id="RefactoringMenu" anchor="first"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift X"/>
         </action>
     </actions>
 </idea-plugin>
