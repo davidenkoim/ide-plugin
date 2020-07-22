@@ -2,24 +2,22 @@
     <id>com.github.davidenkoim.idnamessuggestingplugin</id>
     <name>Id Names Suggesting</name>
     <vendor>davidenkoim</vendor>
+    <resource-bundle>messages.IdNamesSuggestingBundle</resource-bundle>
     <!-- Product and plugin compatibility requirements -->
     <!-- https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html -->
 
     <description>
     <![CDATA[
-      Provides tool for automatic naming of variables.
+      <p>Provides tool for automatic naming of variables.</p>
 
-      To use the <b>Id Names Suggesting</b> tool, right click on a variable and select <b>Suggest variable's name</b>.
+      <p>To use the <b>Id Names Suggesting</b> tool, right click on a variable and select <b>Suggest variable's name</b>.</p>
       ]]>
     </description>
 
     <depends>com.intellij.modules.platform</depends>
-    <actions>
-        <action id="org.jetbrains.id.names.suggesting.DeclarationAction"
-                class="org.jetbrains.id.names.suggesting.DeclarationAction" text="Suggest Identifier&#39;s Name"
-                description="Suggest variable&#39;s name">
-            <add-to-group group-id="RefactoringMenu" anchor="first"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift X"/>
-        </action>
-    </actions>
+    <extensions defaultExtensionNs="com.intellij">
+        <intentionAction>
+            <className>org.jetbrains.id.names.suggesting.SuggestingIntention</className>
+        </intentionAction>
+    </extensions>
 </idea-plugin>
