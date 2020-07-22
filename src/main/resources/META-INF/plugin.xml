@@ -8,13 +8,14 @@
 
     <description>
     <![CDATA[
-      <p>Provides tool for automatic naming of variables.</p>
+      <p>Provides assistance in naming variables.</p>
 
       <p>To use the <b>Id Names Suggesting</b> tool, right click on a variable and select <b>Suggest variable's name</b>.</p>
       ]]>
     </description>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
     <extensions defaultExtensionNs="com.intellij">
         <intentionAction>
             <className>org.jetbrains.id.names.suggesting.SuggestingIntention</className>
