@@ -1,1 +1,1 @@
-example before
+int y = map.get(x);
