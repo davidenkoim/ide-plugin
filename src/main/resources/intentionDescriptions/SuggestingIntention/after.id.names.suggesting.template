@@ -1,1 +1,1 @@
-int a = map.get(x);
+String firstName = obj.getFirstName()
