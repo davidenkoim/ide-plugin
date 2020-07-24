@@ -3,28 +3,24 @@ package org.jetbrains.id.names.suggesting;
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.lang.java.JavaLanguage;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.SelectionModel;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.AtomicNotNullLazyValue;
-import com.intellij.openapi.util.NotNullLazyValue;
-import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
-import com.intellij.psi.impl.PsiImplUtil;
+import com.intellij.refactoring.rename.inplace.InplaceRefactoring;
+import com.intellij.refactoring.rename.inplace.VariableInplaceRenamer;
 import com.intellij.util.IncorrectOperationException;
-import com.siyeh.ipp.base.PsiElementEditorPredicate;
-import com.siyeh.ipp.base.PsiElementPredicate;
-import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.LinkedHashSet;
+
 public class SuggestingIntention implements IntentionAction {
     @Override
-    public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String getText() {
+    public @NotNull String getText() {
         return IdNamesSuggestingBundle.message("intention.text");
     }
 
     @Override
-    public @NotNull @Nls(capitalization = Nls.Capitalization.Sentence) String getFamilyName() {
+    public @NotNull String getFamilyName() {
         return getText();
     }
 
@@ -36,48 +32,44 @@ public class SuggestingIntention implements IntentionAction {
     @Override
     public void invoke(@NotNull Project project, Editor editor, PsiFile file) throws IncorrectOperationException {
         final PsiElement element = findMatchingElement(file, editor);
-        if (element == null) {
-            return;
-        }
-        assert element.isValid() : element;
+        assert element != null;
+        assert element.isValid() : "Invalid element:" + element;
         processIntention(element, project, editor);
     }
 
-    private void processIntention(PsiElement element, Project project, Editor editor) {
+    private void processIntention(@NotNull PsiElement elementToRename, Project project, @NotNull Editor editor) {
+        InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer((PsiNamedElement) elementToRename, editor);
+        LinkedHashSet<String> nameSuggestions = new LinkedHashSet<>();
+        nameSuggestions.add("Plugin");
+        inplaceRefactoring.performInplaceRefactoring(nameSuggestions);
     }
 
-    protected boolean isStopElement(PsiElement element) {
-        return element instanceof PsiFile;
-    }
-
-    private final PsiElementPredicate predicate = new PsiElementPredicate() {
-        @Override
-        public boolean satisfiedBy(PsiElement element) {
-            return element instanceof PsiVariable;
-        }
-    };
-
-    @Nullable
-    PsiElement findMatchingElement(PsiFile file, Editor editor) {
+    private @Nullable PsiElement findMatchingElement(@NotNull PsiFile file, @NotNull Editor editor) {
         if (!file.getViewProvider().getLanguages().contains(JavaLanguage.INSTANCE)) {
             return null;
         }
 
-        final int position = editor.getCaretModel().getOffset();
-        PsiElement element = file.findElementAt(position);
-        while (element != null) {
-            if (predicate.satisfiedBy(element)) return element;
-            if (isStopElement(element)) break;
-            element = element.getParent();
+        final int offset = editor.getCaretModel().getOffset();
+        final PsiElement declaration = getDeclaration(file.findElementAt(offset));
+        if (declaration != null) {
+            return declaration;
         }
+        return getDeclaration(file.findElementAt(offset - 1));
+    }
 
-        element = file.findElementAt(position - 1);
-        while (element != null) {
-            if (predicate.satisfiedBy(element)) return element;
-            if (isStopElement(element)) return null;
+    private @Nullable PsiElement getDeclaration(@Nullable PsiElement element) {
+        if (element instanceof PsiIdentifier) {
             element = element.getParent();
+            if (element instanceof PsiVariable) {
+                return element;
+            }
+            if (element instanceof PsiReferenceExpression) {
+                element = ((PsiReferenceExpression) element).resolve();
+                if (element instanceof PsiVariable) {
+                    return element;
+                }
+            }
         }
-
         return null;
     }
 
