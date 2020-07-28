@@ -41,6 +41,9 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.10.0")
+    implementation("org.junit.jupiter:junit-jupiter-params:5.5.1")
+    implementation("org.junit.jupiter:junit-jupiter-api:5.5.1")
+    implementation("org.junit.jupiter:junit-jupiter-engine:5.5.1")
 }
 
 // Configure gradle-intellij-plugin plugin.
