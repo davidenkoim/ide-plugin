@@ -36,6 +36,7 @@ version = pluginVersion
 repositories {
     mavenCentral()
     jcenter()
+    maven(url = "https://bintray.com/jetbrains/intellij-third-party-dependencies")
 }
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
