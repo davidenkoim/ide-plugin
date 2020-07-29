@@ -20,5 +20,7 @@
         <intentionAction>
             <className>org.jetbrains.id.names.suggesting.SuggestingIntention</className>
         </intentionAction>
+        <projectService serviceInterface="org.jetbrains.id.names.suggesting.NGramService"
+                        serviceImplementation="org.jetbrains.id.names.suggesting.impl.NGramServiceImpl"/>
     </extensions>
 </idea-plugin>
