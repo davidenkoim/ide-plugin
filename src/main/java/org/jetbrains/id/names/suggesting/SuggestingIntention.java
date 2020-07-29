@@ -26,7 +26,8 @@ public class SuggestingIntention implements IntentionAction {
 
     @Override
     public boolean isAvailable(@NotNull Project project, Editor editor, PsiFile file) {
-        return findMatchingElement(file, editor) != null;
+        return NGramService.getInstance(project).isLearntProject() &&
+                findMatchingElement(file, editor) != null;
     }
 
     @Override
