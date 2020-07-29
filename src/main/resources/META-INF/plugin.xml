@@ -23,4 +23,11 @@
         <projectService serviceInterface="org.jetbrains.id.names.suggesting.NGramService"
                         serviceImplementation="org.jetbrains.id.names.suggesting.impl.NGramServiceImpl"/>
     </extensions>
+    <actions>
+        <action id="learn.project.id.model" class="org.jetbrains.id.names.suggesting.LearnProjectIdModelAction"
+                text="Learn Project Id Model">
+            <add-to-group group-id="AnalyzeMenu" anchor="first"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift Z"/>
+        </action>
+    </actions>
 </idea-plugin>
