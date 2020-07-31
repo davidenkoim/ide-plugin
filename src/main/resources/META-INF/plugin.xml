@@ -20,11 +20,11 @@
         <intentionAction>
             <className>org.jetbrains.id.names.suggesting.SuggestingIntention</className>
         </intentionAction>
-        <projectService serviceInterface="org.jetbrains.id.names.suggesting.NGramService"
-                        serviceImplementation="org.jetbrains.id.names.suggesting.impl.NGramServiceImpl"/>
+        <projectService serviceInterface="org.jetbrains.id.names.suggesting.ModelService"
+                        serviceImplementation="org.jetbrains.id.names.suggesting.impl.ModelServiceImpl"/>
     </extensions>
     <actions>
-        <action id="learn.project.id.model" class="org.jetbrains.id.names.suggesting.LearnProjectIdModelAction"
+        <action id="learn.project.id.model" class="org.jetbrains.id.names.suggesting.LearnProjectModelAction"
                 text="Learn Project Id Model">
             <add-to-group group-id="AnalyzeMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift Z"/>
