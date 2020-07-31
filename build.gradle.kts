@@ -36,7 +36,7 @@ version = pluginVersion
 repositories {
     mavenCentral()
     jcenter()
-    maven(url = "https://bintray.com/jetbrains/intellij-third-party-dependencies")
+    maven(url = "https://jetbrains.bintray.com/intellij-third-party-dependencies")
 }
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
@@ -44,6 +44,7 @@ dependencies {
     implementation("org.junit.jupiter:junit-jupiter-params:5.5.1")
     implementation("org.junit.jupiter:junit-jupiter-api:5.5.1")
     implementation("org.junit.jupiter:junit-jupiter-engine:5.5.1")
+    implementation("org.jetbrains.intellij.deps.completion:ngram-slp:0.0.2")
 }
 
 // Configure gradle-intellij-plugin plugin.
