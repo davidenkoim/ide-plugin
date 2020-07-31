@@ -12,7 +12,6 @@ public class ModelServiceImpl implements ModelService {
     NGramModelContributor modelContributor;
 
     public ModelServiceImpl(Project project) {
-        this.modelContributor = new NGramModelContributor();
     }
 
     @Override
@@ -22,7 +21,8 @@ public class ModelServiceImpl implements ModelService {
 
     @Override
     public void learnFile(@NotNull PsiFile file, @NotNull ProgressIndicator progressIndicator) {
-        this.modelContributor.learnPsiFile(file);
+        modelContributor = new NGramModelContributor();
+        modelContributor.learnPsiFile(file);
         isLearnt = true;
     }
 }
