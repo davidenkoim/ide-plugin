@@ -40,8 +40,7 @@ public class SuggestingIntention implements IntentionAction {
 
     private void processIntention(@NotNull PsiElement elementToRename, Project project, @NotNull Editor editor) {
         InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer((PsiNamedElement) elementToRename, editor);
-        LinkedHashSet<String> nameSuggestions = new LinkedHashSet<>();
-        nameSuggestions.add("Plugin");
+        LinkedHashSet<String> nameSuggestions = ModelService.getInstance(project).predictVariableName(elementToRename);
         inplaceRefactoring.performInplaceRefactoring(nameSuggestions);
     }
 
