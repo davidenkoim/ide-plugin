@@ -24,13 +24,13 @@ public class ModelServiceImpl implements ModelService {
 
     @Override
     public void learnFile(@NotNull PsiFile file, @NotNull ProgressIndicator progressIndicator) {
-        modelContributor = new NGramModelContributor();
+        modelContributor = NGramModelContributor.createInstance();
         modelContributor.learnPsiFile(file);
         isLearnt = true;
     }
 
     @Override
     public LinkedHashSet<String> predictVariableName(@NotNull PsiElement element) {
-        return modelContributor.predictVariableName(element);
+        return modelContributor.contribute(element);
     }
 }
