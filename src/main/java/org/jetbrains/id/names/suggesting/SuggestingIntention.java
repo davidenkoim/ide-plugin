@@ -26,47 +26,50 @@ public class SuggestingIntention implements IntentionAction {
 
     @Override
     public boolean isAvailable(@NotNull Project project, Editor editor, PsiFile file) {
-        return ModelService.getInstance(project).isLearntProject() &&
-                findMatchingElement(file, editor) != null;
+        final PsiElement element = findMatchingElement(file, editor);
+        return element != null && element.isValid();
     }
 
     @Override
     public void invoke(@NotNull Project project, Editor editor, PsiFile file) throws IncorrectOperationException {
-        final PsiElement element = findMatchingElement(file, editor);
+        final PsiVariable element = findMatchingElement(file, editor);
         assert element != null;
         assert element.isValid() : "Invalid element:" + element;
         processIntention(element, project, editor);
     }
 
-    private void processIntention(@NotNull PsiElement elementToRename, Project project, @NotNull Editor editor) {
-        InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer((PsiNamedElement) elementToRename, editor);
-        LinkedHashSet<String> nameSuggestions = ModelService.getInstance(project).predictVariableName(elementToRename);
+    private void processIntention(@NotNull PsiVariable elementToRename, Project project, @NotNull Editor editor) {
+        InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer(elementToRename, editor);
+        ModelService service = ModelService.getInstance(project);
+        service.learnFile(elementToRename.getContainingFile());
+        service.forgetVariableUsages(elementToRename);
+        LinkedHashSet<String> nameSuggestions = service.predictVariableName(elementToRename);
         inplaceRefactoring.performInplaceRefactoring(nameSuggestions);
     }
 
-    private @Nullable PsiElement findMatchingElement(@NotNull PsiFile file, @NotNull Editor editor) {
+    private @Nullable PsiVariable findMatchingElement(@NotNull PsiFile file, @NotNull Editor editor) {
         if (!file.getViewProvider().getLanguages().contains(JavaLanguage.INSTANCE)) {
             return null;
         }
 
         final int offset = editor.getCaretModel().getOffset();
-        final PsiElement declaration = getDeclaration(file.findElementAt(offset));
+        final PsiVariable declaration = getDeclaration(file.findElementAt(offset));
         if (declaration != null) {
             return declaration;
         }
         return getDeclaration(file.findElementAt(offset - 1));
     }
 
-    private @Nullable PsiElement getDeclaration(@Nullable PsiElement element) {
+    private @Nullable PsiVariable getDeclaration(@Nullable PsiElement element) {
         if (element instanceof PsiIdentifier) {
             element = element.getParent();
             if (element instanceof PsiVariable) {
-                return element;
+                return (PsiVariable) element;
             }
             if (element instanceof PsiReferenceExpression) {
                 element = ((PsiReferenceExpression) element).resolve();
                 if (element instanceof PsiVariable) {
-                    return element;
+                    return (PsiVariable) element;
                 }
             }
         }

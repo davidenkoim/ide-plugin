@@ -3,9 +3,10 @@ package org.jetbrains.id.names.suggesting;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiVariable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashSet;
 
@@ -20,11 +21,15 @@ public interface ModelService {
     boolean isLearntProject();
 
     /**
-     * Initialize training process on file|project.
-     *  @param file : current file|project
-     * @param progressIndicator :
+     * Initialize training process on file.
+     *
+     * @param file              : current file|project
      */
-    void learnFile(@NotNull PsiFile file, @NotNull ProgressIndicator progressIndicator);
+    void learnFile(@NotNull PsiFile file);
 
-    public LinkedHashSet<String> predictVariableName(@NotNull PsiElement element);
+    void learnProject(@NotNull PsiFile file, @Nullable ProgressIndicator progressIndicator);
+
+    LinkedHashSet<String> predictVariableName(@NotNull PsiVariable element);
+
+    void forgetVariableUsages(@NotNull PsiVariable elementToRename);
 }
