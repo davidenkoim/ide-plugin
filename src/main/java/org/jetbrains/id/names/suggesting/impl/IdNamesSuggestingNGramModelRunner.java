@@ -5,27 +5,34 @@ import com.intellij.completion.ngram.slp.counting.giga.GigaCounter;
 import com.intellij.completion.ngram.slp.modeling.ngram.JMModel;
 import com.intellij.completion.ngram.slp.modeling.ngram.NGramModel;
 import com.intellij.completion.ngram.slp.translating.Vocabulary;
+import com.intellij.ide.highlighter.JavaFileType;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
+import com.intellij.psi.search.FileTypeIndex;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
+import com.intellij.util.indexing.FileBasedIndex;
 import kotlin.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.id.names.suggesting.NameModelContributor;
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelRunner;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.max;
+import static org.jetbrains.id.names.suggesting.IdNamesContributor.GLOBAL_PREDICTION_CUTOFF;
 
-public class NameModelContributorImpl implements NameModelContributor {
+public class IdNamesSuggestingNGramModelRunner implements IdNamesSuggestingModelRunner {
     private final Vocabulary vocabulary;
     private final NGramModel model;
-    private final int GLOBAL_PREDICTION_CUTOFF = 10;
     private final HashSet<Integer> identifiers = new HashSet<>();
 
-    public NameModelContributorImpl() {
+    public IdNamesSuggestingNGramModelRunner() {
         this.vocabulary = new Vocabulary();
         this.model = new JMModel(6, 0.5, new GigaCounter());
     }
@@ -33,6 +40,25 @@ public class NameModelContributorImpl implements NameModelContributor {
     @Override
     public void learnPsiFile(@NotNull PsiFile file) {
         model.learn(vocabulary.toIndices(lexPsiFile(file)));
+    }
+
+    @Override
+    public void learnProject(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
+        progressIndicator.setIndeterminate(false);
+        Collection<VirtualFile> files = getTrainingFiles(project);
+        double[] done = new double[2];
+        done[0] = 1;
+        done[1] = files.size();
+        files.forEach(file -> {
+            PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
+            if (psiFile != null) learnPsiFile(psiFile);
+            progressIndicator.setFraction(++done[0]/done[1]);
+        });
+    }
+
+    public static Collection<VirtualFile> getTrainingFiles(@NotNull Project project) {
+        System.out.println("Learning on all project files...");
+        return FileBasedIndex.getInstance().getContainingFiles(FileTypeIndex.NAME, JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project));
     }
 
     private List<String> lexPsiFile(@NotNull PsiFile file) {
@@ -62,7 +88,7 @@ public class NameModelContributorImpl implements NameModelContributor {
     }
 
     @Override
-    public LinkedHashSet<String> contribute(@NotNull PsiVariable element) {
+    public LinkedHashSet<String> predictVariableName(@NotNull PsiVariable element) {
         Stream<PsiReference> elementUsages = ReferencesSearch
                 .search(element)
                 .findAll()

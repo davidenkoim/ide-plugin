@@ -7,7 +7,7 @@
     <!-- https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html -->
 
     <description>
-    <![CDATA[
+        <![CDATA[
       <p>Provides assistance in naming variables.</p>
 
       <p>To use the <b>Id Names Suggesting</b> tool, right click on a variable and select <b>Suggest variable's name</b>.</p>
@@ -23,11 +23,19 @@
         <projectService serviceInterface="org.jetbrains.id.names.suggesting.ModelService"
                         serviceImplementation="org.jetbrains.id.names.suggesting.impl.ModelServiceImpl"/>
     </extensions>
+    <extensions defaultExtensionNs="org.jetbrains.id.names.suggesting">
+        <idNamesContributor implementation="org.jetbrains.id.names.suggesting.contributors.FileIdNamesContributor"/>
+        <idNamesContributor implementation="org.jetbrains.id.names.suggesting.contributors.ProjectIdNamesContributor"/>
+    </extensions>
     <actions>
-        <action id="learn.project.id.model" class="org.jetbrains.id.names.suggesting.LearnProjectModelAction"
+        <action id="learn.project.id.model" class="org.jetbrains.id.names.suggesting.impl.LearnProjectModelAction"
                 text="Learn Project Id Model">
             <add-to-group group-id="AnalyzeMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift Z"/>
         </action>
     </actions>
+    <extensionPoints>
+        <extensionPoint qualifiedName="org.jetbrains.id.names.suggesting.idNamesContributor"
+                        interface="org.jetbrains.id.names.suggesting.IdNamesContributor" dynamic="true"/>
+    </extensionPoints>
 </idea-plugin>

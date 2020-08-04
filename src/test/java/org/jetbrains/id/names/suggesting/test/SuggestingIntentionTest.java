@@ -4,7 +4,7 @@ import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
-import org.jetbrains.id.names.suggesting.LearnProjectModelAction;
+import org.jetbrains.id.names.suggesting.impl.LearnProjectModelAction;
 
 public class SuggestingIntentionTest extends IdNamesSuggestingTestCase {
     @Override
