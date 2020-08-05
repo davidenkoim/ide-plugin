@@ -1,12 +1,12 @@
 package org.jetbrains.id.names.suggesting.impl;
 
+import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelManager;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
-import org.jetbrains.id.names.suggesting.api.ModelManager;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ModelManagerImpl implements ModelManager {
+public class IdNamesSuggestingModelManagerImpl implements IdNamesSuggestingModelManager {
     private final Map<String, IdNamesSuggestingModelRunner> myModelRunners = new HashMap<>();
 
     @Override

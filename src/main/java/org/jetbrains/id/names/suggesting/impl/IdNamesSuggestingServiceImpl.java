@@ -4,10 +4,10 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.psi.PsiVariable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.api.IdNamesContributor;
+import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelManager;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingService;
 import com.intellij.openapi.project.Project;
-import org.jetbrains.id.names.suggesting.api.ModelManager;
 import org.jetbrains.id.names.suggesting.contributors.ProjectIdNamesContributor;
 
 import java.util.LinkedHashSet;
@@ -20,7 +20,7 @@ public class IdNamesSuggestingServiceImpl implements IdNamesSuggestingService {
     public void learnProject(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
         IdNamesSuggestingModelRunner modelRunner = new IdNamesSuggestingNGramModelRunner(true);
         modelRunner.learnProject(project, progressIndicator);
-        ModelManager.getInstance(project).putModelRunner(ProjectIdNamesContributor.class.getName(),
+        IdNamesSuggestingModelManager.getInstance(project).putModelRunner(ProjectIdNamesContributor.class.getName(),
                 modelRunner);
     }
 

@@ -20,8 +20,8 @@
         <intentionAction>
             <className>org.jetbrains.id.names.suggesting.SuggestingIntention</className>
         </intentionAction>
-        <projectService serviceInterface="org.jetbrains.id.names.suggesting.api.ModelManager"
-                        serviceImplementation="org.jetbrains.id.names.suggesting.impl.ModelManagerImpl"/>
+        <projectService serviceInterface="org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelManager"
+                        serviceImplementation="org.jetbrains.id.names.suggesting.impl.IdNamesSuggestingModelManagerImpl"/>
         <projectService serviceInterface="org.jetbrains.id.names.suggesting.api.IdNamesSuggestingService"
                         serviceImplementation="org.jetbrains.id.names.suggesting.impl.IdNamesSuggestingServiceImpl"/>
     </extensions>
