@@ -2,6 +2,7 @@ package org.jetbrains.id.names.suggesting.impl;
 
 import com.google.common.collect.Lists;
 import com.intellij.completion.ngram.slp.counting.giga.GigaCounter;
+import com.intellij.completion.ngram.slp.counting.trie.ArrayTrieCounter;
 import com.intellij.completion.ngram.slp.modeling.ngram.JMModel;
 import com.intellij.completion.ngram.slp.modeling.ngram.NGramModel;
 import com.intellij.completion.ngram.slp.translating.Vocabulary;
@@ -14,32 +15,36 @@ import com.intellij.psi.*;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
-import com.intellij.util.indexing.FileBasedIndex;
 import kotlin.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelRunner;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.max;
-import static org.jetbrains.id.names.suggesting.IdNamesContributor.GLOBAL_PREDICTION_CUTOFF;
+import static org.jetbrains.id.names.suggesting.api.IdNamesContributor.GLOBAL_PREDICTION_CUTOFF;
 
 public class IdNamesSuggestingNGramModelRunner implements IdNamesSuggestingModelRunner {
-    private final Vocabulary vocabulary;
-    private final NGramModel model;
-    private final HashSet<Integer> identifiers = new HashSet<>();
+    private final Vocabulary myVocabulary;
+    private final NGramModel myModel;
+    private final HashSet<Integer> myIdentifiers = new HashSet<>();
 
-    public IdNamesSuggestingNGramModelRunner() {
-        this.vocabulary = new Vocabulary();
-        this.model = new JMModel(6, 0.5, new GigaCounter());
+    public IdNamesSuggestingNGramModelRunner(boolean isLargeCorpora) {
+        this.myVocabulary = new Vocabulary();
+        if (isLargeCorpora) {
+            this.myModel = new JMModel(6, 0.5, new GigaCounter());
+        } else {
+            this.myModel = new JMModel(6, 0.5, new ArrayTrieCounter());
+        }
     }
 
     @Override
     public void learnPsiFile(@NotNull PsiFile file) {
-        model.learn(vocabulary.toIndices(lexPsiFile(file)));
+        myModel.learn(myVocabulary.toIndices(lexPsiFile(file)));
     }
 
     @Override
@@ -51,14 +56,15 @@ public class IdNamesSuggestingNGramModelRunner implements IdNamesSuggestingModel
         done[1] = files.size();
         files.forEach(file -> {
             PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
-            if (psiFile != null) learnPsiFile(psiFile);
-            progressIndicator.setFraction(++done[0]/done[1]);
+            if (psiFile != null) {
+                learnPsiFile(psiFile);
+            }
+            progressIndicator.setFraction(++done[0] / done[1]);
         });
     }
 
-    public static Collection<VirtualFile> getTrainingFiles(@NotNull Project project) {
-        System.out.println("Learning on all project files...");
-        return FileBasedIndex.getInstance().getContainingFiles(FileTypeIndex.NAME, JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project));
+    private static Collection<VirtualFile> getTrainingFiles(@NotNull Project project) {
+        return FileTypeIndex.getFiles(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project));
     }
 
     private List<String> lexPsiFile(@NotNull PsiFile file) {
@@ -74,10 +80,8 @@ public class IdNamesSuggestingNGramModelRunner implements IdNamesSuggestingModel
     }
 
     private void addToIdentifiers(PsiElement element) {
-        if (element instanceof PsiIdentifier) {
-            if (element.getParent() instanceof PsiVariable) {
-                identifiers.add(vocabulary.toIndex(element.getText()));
-            }
+        if (element instanceof PsiIdentifier && element.getParent() instanceof PsiVariable) {
+            myIdentifiers.add(myVocabulary.toIndex(element.getText()));
         }
     }
 
@@ -88,56 +92,74 @@ public class IdNamesSuggestingNGramModelRunner implements IdNamesSuggestingModel
     }
 
     @Override
-    public LinkedHashSet<String> predictVariableName(@NotNull PsiVariable element) {
+    public LinkedHashSet<String> predictVariableName(@NotNull PsiVariable variable) {
         Stream<PsiReference> elementUsages = ReferencesSearch
-                .search(element)
+                .search(variable)
                 .findAll()
                 .stream();
-        return Stream.concat(Stream.of(element), elementUsages)
+        return Stream.concat(Stream.of(variable), elementUsages)
                 .map(this::getIdentifier)
-                .flatMap(this::contributeUsageName)
+                .flatMap(this::predictUsageName)
                 .sorted((p1, p2) -> -Double.compare(p1.getSecond(), p2.getSecond()))
                 .map(Pair::getFirst)
                 .distinct()
                 .limit(GLOBAL_PREDICTION_CUTOFF)
-                .map(vocabulary::toWord)
+                .map(myVocabulary::toWord)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    private PsiIdentifier getIdentifier(Object element) {
+    private @Nullable PsiIdentifier getIdentifier(Object element) {
         if (element instanceof PsiVariable) return ((PsiVariable) element).getNameIdentifier();
         if (element instanceof PsiReferenceExpression)
             return (PsiIdentifier) ((PsiReferenceExpression) element).getReferenceNameElement();
         return null;
     }
 
-    private Stream<Pair<Integer, Double>> contributeUsageName(@NotNull PsiIdentifier identifier) {
-        return model.predictToken(vocabulary.toIndices(getNGramPrefix(identifier, model.getOrder())), model.getOrder() - 1)
+    private Stream<Pair<Integer, Double>> predictUsageName(@Nullable PsiIdentifier identifier) {
+        if (identifier == null) {
+            return Stream.empty();
+        }
+        return myModel.predictToken(myVocabulary.toIndices(getNGramPrefix(identifier, myModel.getOrder())), myModel.getOrder() - 1)
                 .entrySet()
                 .stream()
-                .filter(e -> identifiers.contains(e.getKey()))
-                .map(e -> new Pair<Integer, Double>(e.getKey(), toProb(e.getValue())));
+                .filter(e -> myIdentifiers.contains(e.getKey()))
+                .map(e -> new Pair<>(e.getKey(), toProb(e.getValue())));
     }
 
-    public double toProb(@NotNull Pair<Double, Double> probConf) {
+    private double toProb(@NotNull Pair<Double, Double> probConf) {
         double prob = probConf.getFirst();
         double conf = probConf.getSecond();
-        return prob * conf + (1 - conf) / vocabulary.size();
+        return prob * conf + (1 - conf) / myVocabulary.size();
     }
 
     @Override
-    public void forgetVariableUsages(@NotNull PsiVariable element) {
+    public void forgetVariableUsages(@NotNull PsiVariable variable) {
         Stream<PsiReference> elementUsages = ReferencesSearch
-                .search(element)
+                .search(variable)
                 .findAll()
                 .stream();
-        Stream.concat(Stream.of(element), elementUsages)
+        Stream.concat(Stream.of(variable), elementUsages)
                 .map(this::getIdentifier)
                 .forEach(this::forgetVariableUsage);
     }
 
     private void forgetVariableUsage(PsiIdentifier identifier) {
-        model.forgetToken(vocabulary.toIndices(getNGramPrefix(identifier, model.getOrder())), model.getOrder() - 1);
+        myModel.forgetToken(myVocabulary.toIndices(getNGramPrefix(identifier, myModel.getOrder())), myModel.getOrder() - 1);
+    }
+
+    @Override
+    public void learnVariableUsages(@NotNull PsiVariable variable) {
+        Stream<PsiReference> elementUsages = ReferencesSearch
+                .search(variable)
+                .findAll()
+                .stream();
+        Stream.concat(Stream.of(variable), elementUsages)
+                .map(this::getIdentifier)
+                .forEach(this::learnVariableUsage);
+    }
+
+    private void learnVariableUsage(PsiIdentifier identifier) {
+        myModel.learnToken(myVocabulary.toIndices(getNGramPrefix(identifier, myModel.getOrder())), myModel.getOrder() - 1);
     }
 
     private List<String> getNGramPrefix(@NotNull PsiElement element, int order) {

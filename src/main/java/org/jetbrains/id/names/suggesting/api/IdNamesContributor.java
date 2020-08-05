@@ -1,4 +1,4 @@
-package org.jetbrains.id.names.suggesting;
+package org.jetbrains.id.names.suggesting.api;
 
 import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.psi.PsiVariable;
@@ -13,8 +13,9 @@ public interface IdNamesContributor {
 
     /**
      * Contribute some variable names.
-     * @param element: element which name we want to predict.
-     * @return : set of names for variable.
+     *
+     * @param variable    : variable which name we want to predict.
+     * @param resultSet : set of strings in which contributor add name suggestions.
      */
-    LinkedHashSet<String> contribute(@NotNull PsiVariable element);
+    void contribute(@NotNull PsiVariable variable, @NotNull LinkedHashSet<String> resultSet);
 }

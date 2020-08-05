@@ -1,4 +1,4 @@
-package org.jetbrains.id.names.suggesting;
+package org.jetbrains.id.names.suggesting.api;
 
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
@@ -25,17 +25,24 @@ public interface IdNamesSuggestingModelRunner {
     void learnProject(@NotNull Project project, @NotNull ProgressIndicator progressIndicator);
 
     /**
-     * Makes name suggestions for element.
+     * Makes name suggestions for variable.
      *
-     * @param element:
-     * @return LinkedHashSet of names for element.
+     * @param variable:
+     * @return LinkedHashSet of names for variable.
      */
-    LinkedHashSet<String> predictVariableName(@NotNull PsiVariable element);
+    LinkedHashSet<String> predictVariableName(@NotNull PsiVariable variable);
 
     /**
-     * Forget element usages.
+     * Forget variable usages.
      *
-     * @param element:
+     * @param variable:
      */
-    void forgetVariableUsages(@NotNull PsiVariable element);
+    void forgetVariableUsages(@NotNull PsiVariable variable);
+
+    /**
+     * Learn variable usages.
+     *
+     * @param variable:
+     */
+    void learnVariableUsages(@NotNull PsiVariable variable);
 }

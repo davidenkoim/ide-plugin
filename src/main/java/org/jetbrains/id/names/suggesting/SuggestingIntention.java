@@ -10,6 +10,7 @@ import com.intellij.refactoring.rename.inplace.VariableInplaceRenamer;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingService;
 
 import java.util.LinkedHashSet;
 
@@ -38,11 +39,10 @@ public class SuggestingIntention implements IntentionAction {
         processIntention(element, project, editor);
     }
 
-    private void processIntention(@NotNull PsiVariable elementToRename, Project project, @NotNull Editor editor) {
-        InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer(elementToRename, editor);
-        ModelService service = ModelService.getInstance(project);
-        LinkedHashSet<String> nameSuggestions = new LinkedHashSet<>();
-        service.predictVariableName(elementToRename, nameSuggestions);
+    private void processIntention(@NotNull PsiVariable variableToRename, Project project, @NotNull Editor editor) {
+        InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer(variableToRename, editor);
+        LinkedHashSet<String> nameSuggestions = IdNamesSuggestingService.getInstance(project)
+                .predictVariableName(variableToRename);
         inplaceRefactoring.performInplaceRefactoring(nameSuggestions);
     }
 

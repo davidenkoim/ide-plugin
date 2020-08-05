@@ -4,7 +4,7 @@ import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
-import org.jetbrains.id.names.suggesting.impl.LearnProjectModelAction;
+import org.jetbrains.id.names.suggesting.impl.TrainProjectModelAction;
 
 public class SuggestingIntentionTest extends IdNamesSuggestingTestCase {
     @Override
@@ -30,14 +30,14 @@ public class SuggestingIntentionTest extends IdNamesSuggestingTestCase {
 
     private void doTestIntentionIsAvailable() {
         configureByFile();
-        myFixture.testAction(new LearnProjectModelAction());
+        myFixture.testAction(new TrainProjectModelAction());
         assertContainsElements(ContainerUtil.map(myFixture.getAvailableIntentions(), IntentionAction::getText),
                 IdNamesSuggestingBundle.message("intention.text"));
     }
 
     private void doTestIntentionIsNotAvailable() {
         configureByFile();
-        myFixture.testAction(new LearnProjectModelAction());
+        myFixture.testAction(new TrainProjectModelAction());
         assertDoesntContain(ContainerUtil.map(myFixture.getAvailableIntentions(), IntentionAction::getText),
                 IdNamesSuggestingBundle.message("intention.text"));
     }

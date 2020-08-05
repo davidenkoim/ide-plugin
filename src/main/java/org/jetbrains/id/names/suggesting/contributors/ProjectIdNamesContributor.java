@@ -2,18 +2,20 @@ package org.jetbrains.id.names.suggesting.contributors;
 
 import com.intellij.psi.PsiVariable;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.id.names.suggesting.IdNamesContributor;
-import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelRunner;
-import org.jetbrains.id.names.suggesting.ModelService;
+import org.jetbrains.id.names.suggesting.api.IdNamesContributor;
+import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
+import org.jetbrains.id.names.suggesting.api.ModelManager;
 
 import java.util.LinkedHashSet;
 
 public class ProjectIdNamesContributor implements IdNamesContributor {
     @Override
-    public LinkedHashSet<String> contribute(@NotNull PsiVariable element) {
-        IdNamesSuggestingModelRunner modelRunner = ModelService.getInstance(element.getProject())
-                .getIdNamesSuggestingModelRunner("org.jetbrains.id.names.suggesting.contributors.ProjectIdNamesContributor");
-        if (modelRunner == null) return new LinkedHashSet<>();
-        return modelRunner.predictVariableName(element);
+    public void contribute(@NotNull PsiVariable variable, @NotNull LinkedHashSet<String> resultSet) {
+        IdNamesSuggestingModelRunner modelRunner = ModelManager.getInstance(variable.getProject())
+                .getModelRunner(this.getClass().getName());
+        if (modelRunner == null) return;
+        modelRunner.forgetVariableUsages(variable);
+        resultSet.addAll(modelRunner.predictVariableName(variable));
+        modelRunner.learnVariableUsages(variable);
     }
 }
