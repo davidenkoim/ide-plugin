@@ -1,10 +1,10 @@
-package org.jetbrains.id.names.suggesting;
+package org.jetbrains.id.names.suggesting.api;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class LearnModelActionBase extends AnAction {
+public abstract class AbstractTrainModelAction extends AnAction {
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         if (canBePerformed(e)){
