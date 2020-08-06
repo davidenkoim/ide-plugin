@@ -11,34 +11,31 @@ import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager;
 import org.jetbrains.id.names.suggesting.api.AbstractTrainModelAction;
-import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingService;
 
-public class TrainProjectModelAction extends AbstractTrainModelAction {
+public class TrainProjectNGramModelAction extends AbstractTrainModelAction {
     @Override
     protected void doActionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         assert project != null;
-        IdNamesSuggestingService service = IdNamesSuggestingService.getInstance(project);
-        ProgressManager.getInstance().run(new Task.Backgroundable(project,
-                IdNamesSuggestingBundle.message("training.text1")) {
+        IdNamesSuggestingModelManager modelManager = IdNamesSuggestingModelManager.getInstance(project);
+        ProgressManager.getInstance().run(new Task.Backgroundable(project, IdNamesSuggestingBundle.message("training.task.title")) {
             @Override
             public void run(@NotNull ProgressIndicator progressIndicator) {
-
-                progressIndicator.setText(IdNamesSuggestingBundle.message("training.text2", project.getName()));
+                progressIndicator.setText(IdNamesSuggestingBundle.message("training.progress.indicator.text", project.getName()));
                 ReadAction.nonBlocking(() -> {
-                    service.learnProject(project, progressIndicator);
+                    modelManager.trainProjectNGramModel(project, progressIndicator);
                 })
-                        .inSmartMode(project)
-                        .executeSynchronously();
-
+                          .inSmartMode(project)
+                          .executeSynchronously();
             }
         });
     }
 
     @Override
     protected boolean canBePerformed(@NotNull AnActionEvent e) {
-        return (e.getProject() != null &&
-                FileTypeIndex.containsFileOfType(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(e.getProject())));
+        return e.getProject() != null &&
+               FileTypeIndex.containsFileOfType(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(e.getProject()));
     }
 }

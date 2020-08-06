@@ -6,15 +6,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashSet;
 
-public interface IdNamesContributor {
-    ExtensionPointName<IdNamesContributor> EP_NAME =
-            ExtensionPointName.create("org.jetbrains.id.names.suggesting.idNamesContributor");
-    int GLOBAL_PREDICTION_CUTOFF = 10;
+public interface VariableNamesContributor {
+    ExtensionPointName<VariableNamesContributor> EP_NAME =
+            ExtensionPointName.create("org.jetbrains.id.names.suggesting.variableNamesContributor");
 
     /**
      * Contribute some variable names.
      *
-     * @param variable    : variable which name we want to predict.
+     * @param variable  : variable which name we want to predict.
      * @param resultSet : set of strings in which contributor add name suggestions.
      */
     void contribute(@NotNull PsiVariable variable, @NotNull LinkedHashSet<String> resultSet);

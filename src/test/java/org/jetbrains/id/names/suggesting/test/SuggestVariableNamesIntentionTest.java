@@ -4,9 +4,9 @@ import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
-import org.jetbrains.id.names.suggesting.impl.TrainProjectModelAction;
+import org.jetbrains.id.names.suggesting.impl.TrainProjectNGramModelAction;
 
-public class SuggestingIntentionTest extends IdNamesSuggestingTestCase {
+public class SuggestVariableNamesIntentionTest extends IdNamesSuggestingTestCase {
     @Override
     protected @NotNull String getTestDataBasePath() {
         return "intention";
@@ -30,14 +30,14 @@ public class SuggestingIntentionTest extends IdNamesSuggestingTestCase {
 
     private void doTestIntentionIsAvailable() {
         configureByFile();
-        myFixture.testAction(new TrainProjectModelAction());
+        myFixture.testAction(new TrainProjectNGramModelAction());
         assertContainsElements(ContainerUtil.map(myFixture.getAvailableIntentions(), IntentionAction::getText),
                 IdNamesSuggestingBundle.message("intention.text"));
     }
 
     private void doTestIntentionIsNotAvailable() {
         configureByFile();
-        myFixture.testAction(new TrainProjectModelAction());
+        myFixture.testAction(new TrainProjectNGramModelAction());
         assertDoesntContain(ContainerUtil.map(myFixture.getAvailableIntentions(), IntentionAction::getText),
                 IdNamesSuggestingBundle.message("intention.text"));
     }

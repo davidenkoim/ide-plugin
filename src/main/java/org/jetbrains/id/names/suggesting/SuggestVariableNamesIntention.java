@@ -1,0 +1,44 @@
+package org.jetbrains.id.names.suggesting;
+
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiIdentifier;
+import com.intellij.psi.PsiReferenceExpression;
+import com.intellij.psi.PsiVariable;
+import com.intellij.refactoring.rename.inplace.InplaceRefactoring;
+import com.intellij.refactoring.rename.inplace.VariableInplaceRenamer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.id.names.suggesting.api.SuggestIdNamesIntentionBase;
+
+public class SuggestVariableNamesIntention extends SuggestIdNamesIntentionBase<PsiVariable> {
+    @Override
+    public @NotNull String getText() {
+        return IdNamesSuggestingBundle.message("intention.text");
+    }
+
+    @Override
+    protected void processIntention(@NotNull Project project, @NotNull Editor editor, @NotNull PsiVariable variable) {
+        InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer(variable, editor);
+        inplaceRefactoring.performInplaceRefactoring(IdNamesSuggestingService.getInstance(project)
+                                                                             .suggestVariableName(variable));
+    }
+
+    @Override
+    protected @Nullable PsiVariable getIdentifierOwner(@Nullable PsiElement element) {
+        if (element instanceof PsiIdentifier) {
+            element = element.getParent();
+            if (element instanceof PsiVariable) {
+                return (PsiVariable) element;
+            }
+            if (element instanceof PsiReferenceExpression) {
+                element = ((PsiReferenceExpression) element).resolve();
+                if (element instanceof PsiVariable) {
+                    return (PsiVariable) element;
+                }
+            }
+        }
+        return null;
+    }
+}
