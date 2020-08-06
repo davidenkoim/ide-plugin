@@ -54,15 +54,14 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         if (!isSupported(identifierOwner)) {
             return new LinkedHashSet<>();
         }
-        Stream<PsiReference> elementUsages = ReferencesSearch
-                .search(identifierOwner)
-                .findAll()
-                .stream();
+        Stream<PsiReference> elementUsages = ReferencesSearch.search(identifierOwner)
+                                                             .findAll()
+                                                             .stream();
         List<List<Integer>> allUsageNGramIndicies = Stream.concat(Stream.of(identifierOwner), elementUsages)
-                                                            .map(IdNamesNGramModelRunner::getIdentifier)
-                                                            .filter(Objects::nonNull)
-                                                            .map(this::getNGramIndicies)
-                                                            .collect(Collectors.toList());
+                                                          .map(IdNamesNGramModelRunner::getIdentifier)
+                                                          .filter(Objects::nonNull)
+                                                          .map(this::getNGramIndicies)
+                                                          .collect(Collectors.toList());
         allUsageNGramIndicies.forEach(this::forgetUsage);
         LinkedHashSet<String> resultSet = allUsageNGramIndicies
                 .stream()

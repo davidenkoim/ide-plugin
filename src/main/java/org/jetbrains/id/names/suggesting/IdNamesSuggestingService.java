@@ -8,8 +8,8 @@ import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
 
 import java.util.LinkedHashSet;
 
-class IdNamesSuggestingService {
-    static IdNamesSuggestingService getInstance(@NotNull Project project) {
+public class IdNamesSuggestingService {
+    public static IdNamesSuggestingService getInstance(@NotNull Project project) {
         return ServiceManager.getService(project, IdNamesSuggestingService.class);
     }
 

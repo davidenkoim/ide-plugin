@@ -1,4 +1,4 @@
-package org.jetbrains.id.names.suggesting;
+package org.jetbrains.id.names.suggesting.impl;
 
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -10,6 +10,8 @@ import com.intellij.refactoring.rename.inplace.InplaceRefactoring;
 import com.intellij.refactoring.rename.inplace.VariableInplaceRenamer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingService;
 import org.jetbrains.id.names.suggesting.api.SuggestIdNamesIntentionBase;
 
 public class SuggestVariableNamesIntention extends SuggestIdNamesIntentionBase<PsiVariable> {
