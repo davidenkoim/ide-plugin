@@ -7,7 +7,7 @@ import com.intellij.psi.PsiIdentifier;
 import com.intellij.psi.PsiReferenceExpression;
 import com.intellij.psi.PsiVariable;
 import com.intellij.refactoring.rename.inplace.InplaceRefactoring;
-import com.intellij.refactoring.rename.inplace.VariableInplaceRenamer;
+import com.intellij.refactoring.rename.inplace.MemberInplaceRenamer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
@@ -22,7 +22,7 @@ public class SuggestVariableNamesIntention extends SuggestIdNamesIntentionBase<P
 
     @Override
     protected void processIntention(@NotNull Project project, @NotNull Editor editor, @NotNull PsiVariable variable) {
-        InplaceRefactoring inplaceRefactoring = new VariableInplaceRenamer(variable, editor);
+        InplaceRefactoring inplaceRefactoring = new MemberInplaceRenamer(variable, null, editor);
         inplaceRefactoring.performInplaceRefactoring(IdNamesSuggestingService.getInstance(project)
                                                                              .suggestVariableName(variable));
     }
