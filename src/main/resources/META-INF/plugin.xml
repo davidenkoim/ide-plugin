@@ -10,7 +10,7 @@
         <![CDATA[
       <p>Provides assistance in naming variables.</p>
 
-      <p>To use the <b>Id Names Suggesting</b> tool, right click on a variable and select <b>Suggest variable's name</b>.</p>
+      <p>To use the <b>Id Names Suggesting</b> tool, press <b>Alt+Enter</b> on a variable and select <b>Suggest variable name</b>.</p>
       ]]>
     </description>
 
@@ -26,12 +26,18 @@
     <extensions defaultExtensionNs="org.jetbrains.id.names.suggesting">
         <variableNamesContributor implementation="org.jetbrains.id.names.suggesting.contributors.FileVariableNamesContributor"/>
         <variableNamesContributor implementation="org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor"/>
+        <variableNamesContributor
+                implementation="org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor"/>
     </extensions>
     <actions>
-        <action id="learn.project.id.model" class="org.jetbrains.id.names.suggesting.impl.TrainProjectNGramModelAction"
-                text="Learn Project Id Model">
+        <action id="train.project.id.model" class="org.jetbrains.id.names.suggesting.impl.TrainProjectNGramModelAction"
+                text="Train Project Id Model">
             <add-to-group group-id="AnalyzeMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift Z"/>
+        </action>
+        <action id="train.global.id.model" class="org.jetbrains.id.names.suggesting.impl.TrainGlobalNGramModelAction"
+                text="Add Project To Global Id Model">
+            <add-to-group group-id="AnalyzeMenu" anchor="first"/>
         </action>
     </actions>
     <extensionPoints>

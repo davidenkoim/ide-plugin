@@ -82,7 +82,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                       .entrySet()
                       .stream()
                       .filter(idTypeFilter)
-                      .map(e -> new Pair<>(e.getKey(), toProb(e.getValue())));
+                      .map(e -> new Pair<Integer, Double>(e.getKey(), toProb(e.getValue())));
     }
 
     private void forgetUsage(@NotNull List<Integer> usageNGramIndicies) {
@@ -173,5 +173,13 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         double prob = probConf.getFirst();
         double conf = probConf.getSecond();
         return prob * conf + (1 - conf) / myVocabulary.size();
+    }
+
+    public void save(){
+        // Not implemented yet
+    }
+
+    public void load(){
+        // Not implemented yet
     }
 }

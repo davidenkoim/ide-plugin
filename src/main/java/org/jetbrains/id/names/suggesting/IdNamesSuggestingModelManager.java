@@ -5,6 +5,7 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
+import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor;
 import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
 
@@ -13,6 +14,12 @@ import java.util.Map;
 
 public class IdNamesSuggestingModelManager {
     private final Map<String, IdNamesSuggestingModelRunner> myModelRunners = new HashMap<>();
+
+    public IdNamesSuggestingModelManager() {
+        IdNamesNGramModelRunner modelRunner = new IdNamesNGramModelRunner(true);
+        modelRunner.load();
+        putModelRunner(GlobalVariableNamesContributor.class.getName(), modelRunner);
+    }
 
     public static IdNamesSuggestingModelManager getInstance(@NotNull Project project) {
         return ServiceManager.getService(project, IdNamesSuggestingModelManager.class);
@@ -30,5 +37,12 @@ public class IdNamesSuggestingModelManager {
         IdNamesNGramModelRunner modelRunner = new IdNamesNGramModelRunner(true);
         modelRunner.learnProject(project, progressIndicator);
         putModelRunner(ProjectVariableNamesContributor.class.getName(), modelRunner);
+    }
+
+    public void trainGlobalNGramModel(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
+        IdNamesNGramModelRunner modelRunner = (IdNamesNGramModelRunner) IdNamesSuggestingModelManager.getInstance(project)
+                .getModelRunner(GlobalVariableNamesContributor.class.getName());
+        modelRunner.learnProject(project, progressIndicator);
+        modelRunner.save();
     }
 }
