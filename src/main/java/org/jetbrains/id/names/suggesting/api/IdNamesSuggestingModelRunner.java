@@ -2,15 +2,16 @@ package org.jetbrains.id.names.suggesting.api;
 
 import com.intellij.psi.PsiNameIdentifierOwner;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.id.names.suggesting.Prediction;
 
-import java.util.LinkedHashSet;
+import java.util.List;
 
 public interface IdNamesSuggestingModelRunner {
     /**
      * Makes identifier name suggestions.
      *
-     * @param identifierOwner: element to rename
+     * @param identifierOwner : element to rename
      * @return Names for identifier
      */
-    LinkedHashSet<String> suggestNames(@NotNull PsiNameIdentifierOwner identifierOwner);
+    List<Prediction> suggestNames(@NotNull PsiNameIdentifierOwner identifierOwner);
 }

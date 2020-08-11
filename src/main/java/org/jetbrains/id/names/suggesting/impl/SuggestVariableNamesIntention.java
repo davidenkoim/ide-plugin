@@ -6,12 +6,11 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiIdentifier;
 import com.intellij.psi.PsiReferenceExpression;
 import com.intellij.psi.PsiVariable;
-import com.intellij.refactoring.rename.inplace.InplaceRefactoring;
-import com.intellij.refactoring.rename.inplace.MemberInplaceRenamer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingService;
+import org.jetbrains.id.names.suggesting.ModifiedMemberInplaceRenamer;
 import org.jetbrains.id.names.suggesting.api.SuggestIdNamesIntentionBase;
 
 public class SuggestVariableNamesIntention extends SuggestIdNamesIntentionBase<PsiVariable> {
@@ -22,7 +21,7 @@ public class SuggestVariableNamesIntention extends SuggestIdNamesIntentionBase<P
 
     @Override
     protected void processIntention(@NotNull Project project, @NotNull Editor editor, @NotNull PsiVariable variable) {
-        InplaceRefactoring inplaceRefactoring = new MemberInplaceRenamer(variable, null, editor);
+        ModifiedMemberInplaceRenamer inplaceRefactoring = new ModifiedMemberInplaceRenamer(variable, null, editor);
         inplaceRefactoring.performInplaceRefactoring(IdNamesSuggestingService.getInstance(project)
                                                                              .suggestVariableName(variable));
     }

@@ -3,8 +3,9 @@ package org.jetbrains.id.names.suggesting.api;
 import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.psi.PsiVariable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.id.names.suggesting.Prediction;
 
-import java.util.LinkedHashSet;
+import java.util.List;
 
 public interface VariableNamesContributor {
     ExtensionPointName<VariableNamesContributor> EP_NAME =
@@ -13,8 +14,8 @@ public interface VariableNamesContributor {
     /**
      * Contribute some variable names.
      *
-     * @param variable  : variable which name we want to predict.
-     * @param resultSet : set of strings in which contributor add name suggestions.
+     * @param variable        : variable which name we want to predict.
+     * @param predictionList:
      */
-    void contribute(@NotNull PsiVariable variable, @NotNull LinkedHashSet<String> resultSet);
+    void contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList);
 }

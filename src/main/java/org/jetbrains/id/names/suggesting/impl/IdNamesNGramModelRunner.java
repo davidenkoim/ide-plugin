@@ -20,6 +20,7 @@ import kotlin.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.id.names.suggesting.Prediction;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
 
 import java.util.*;
@@ -50,39 +51,45 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     @Override
-    public LinkedHashSet<String> suggestNames(@NotNull PsiNameIdentifierOwner identifierOwner) {
+    public List<Prediction> suggestNames(@NotNull PsiNameIdentifierOwner identifierOwner) {
         if (!isSupported(identifierOwner)) {
-            return new LinkedHashSet<>();
+            return new ArrayList<>();
         }
-        Stream<PsiReference> elementUsages = ReferencesSearch.search(identifierOwner)
-                                                             .findAll()
-                                                             .stream();
-        List<List<Integer>> allUsageNGramIndicies = Stream.concat(Stream.of(identifierOwner), elementUsages)
-                                                          .map(IdNamesNGramModelRunner::getIdentifier)
-                                                          .filter(Objects::nonNull)
-                                                          .map(this::getNGramIndicies)
-                                                          .collect(Collectors.toList());
+        List<List<Integer>> allUsageNGramIndicies = findUsageNGramIndicies(identifierOwner);
         allUsageNGramIndicies.forEach(this::forgetUsage);
-        LinkedHashSet<String> resultSet = allUsageNGramIndicies
+        List<Prediction> predictionList = allUsageNGramIndicies
                 .stream()
                 .flatMap(usage -> predictUsageName(usage, getIdTypeFilter(identifierOwner)))
-                .sorted((p1, p2) -> -Double.compare(p1.getSecond(), p2.getSecond()))
-                .map(Pair::getFirst)
+                .sorted((p1, p2) -> -Double.compare(p1.getProbability(), p2.getProbability()))
                 .distinct()
                 .limit(PREDICTION_CUTOFF)
-                .map(myVocabulary::toWord)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+                .collect(Collectors.toList());
         allUsageNGramIndicies.forEach(this::learnUsage);
-        return resultSet;
+        return predictionList;
     }
 
-    private Stream<Pair<Integer, Double>> predictUsageName(@NotNull List<Integer> usageNGramIndicies,
+    private List<List<Integer>> findUsageNGramIndicies(PsiNameIdentifierOwner identifierOwner) {
+        Stream<PsiReference> elementUsages = findReferences(identifierOwner);
+        return Stream.concat(Stream.of(identifierOwner), elementUsages)
+                .map(IdNamesNGramModelRunner::getIdentifier)
+                .filter(Objects::nonNull)
+                .map(this::getNGramIndicies)
+                .collect(Collectors.toList());
+    }
+
+    public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner){
+        return ReferencesSearch.search(identifierOwner)
+                .findAll()
+                .stream();
+    }
+
+    private Stream<Prediction> predictUsageName(@NotNull List<Integer> usageNGramIndicies,
                                                            @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
         return myModel.predictToken(usageNGramIndicies, myModel.getOrder() - 1)
                       .entrySet()
                       .stream()
                       .filter(idTypeFilter)
-                      .map(e -> new Pair<Integer, Double>(e.getKey(), toProb(e.getValue())));
+                      .map(e -> new Prediction(e.getKey(), myVocabulary.toWord(e.getKey()), toProb(e.getValue())));
     }
 
     private void forgetUsage(@NotNull List<Integer> usageNGramIndicies) {
