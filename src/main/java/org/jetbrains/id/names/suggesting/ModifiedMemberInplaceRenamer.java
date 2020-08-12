@@ -51,7 +51,7 @@ public class ModifiedMemberInplaceRenamer extends MemberInplaceRenamer {
                     @Override
                     public void renderElement(LookupElementPresentation presentation) {
                         super.renderElement(presentation);
-                        presentation.setTailText(String.valueOf(namesProbs.get(lookupElement.getLookupString())), true);
+                        presentation.setTypeText(String.format("%.3f", namesProbs.get(lookupElement.getLookupString())));
                     }
                 });
             }
