@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 import static java.lang.Integer.max;
 
 public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
+    private static final String MODEL_DIRECTORY = "C:\\Users\\Igor.Davidenko\\IdeaProjects\\ide-plugin\\model";
     private static final int PREDICTION_CUTOFF = 10;
     private static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
 
@@ -45,7 +46,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
 
     private final NGramModel myModel;
     private Vocabulary myVocabulary = new Vocabulary();
-    private final HashSet<Integer> myRememberedVariables = new HashSet<>();
+    private HashSet<Integer> myRememberedVariables = new HashSet<>();
 
     public IdNamesNGramModelRunner(boolean isLargeCorpora) {
         myModel = new JMModel(6, 0.5, isLargeCorpora ? new GigaCounter() : new ArrayTrieCounter());
@@ -188,13 +189,24 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     public void save() {
+        save(MODEL_DIRECTORY);
+    }
+
+    public void save(@NotNull String model_directory) {
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream(IdNamesSuggestingBundle.message("counter.path"));
+            FileOutputStream fileOutputStream = new FileOutputStream(model_directory + "\\counter.ser");
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
             myModel.getCounter().writeExternal(objectOutputStream);
             objectOutputStream.close();
+            fileOutputStream.close();
 
-            File vocabularyFile = new File(IdNamesSuggestingBundle.message("vocabulary.path"));
+            fileOutputStream = new FileOutputStream(model_directory + "\\rememberedVariables.ser");
+            objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(myRememberedVariables);
+            objectOutputStream.close();
+            fileOutputStream.close();
+
+            File vocabularyFile = new File(model_directory + "\\vocabulary.ser");
             VocabularyRunner.INSTANCE.write(myVocabulary, vocabularyFile);
         } catch (IOException e) {
             e.printStackTrace();
@@ -202,17 +214,29 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     public void load() {
-        File file = new File(IdNamesSuggestingBundle.message("vocabulary.path"));
-        if (file.exists()) {
-            myVocabulary = VocabularyManager.read(file);
-        }
+        load(MODEL_DIRECTORY);
+    }
 
+    public void load(@NotNull String model_directory) {
         try {
-            FileInputStream fileInputStream = new FileInputStream(IdNamesSuggestingBundle.message("counter.path"));
+            FileInputStream fileInputStream = new FileInputStream(model_directory + "\\counter.ser");
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             myModel.getCounter().readExternal(objectInputStream);
+            objectInputStream.close();
+            fileInputStream.close();
+
+            fileInputStream = new FileInputStream(model_directory + "\\rememberedVariables.ser");
+            objectInputStream = new ObjectInputStream(fileInputStream);
+            myRememberedVariables = (HashSet) objectInputStream.readObject();
+            objectInputStream.close();
+            fileInputStream.close();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+        }
+
+        File file = new File(model_directory + "\\vocabulary.ser");
+        if (file.exists()) {
+            myVocabulary = VocabularyManager.read(file);
         }
     }
 }

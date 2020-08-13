@@ -45,3 +45,6 @@ out/
 
 # Gradle
 /.gradle/
+
+# Don't want to add models right now
+/model*
