@@ -22,6 +22,7 @@
         </intentionAction>
         <projectService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager"/>
         <projectService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingService"/>
+        <backgroundPostStartupActivity implementation="org.jetbrains.id.names.suggesting.LoadingGlobalModelStartupActivity"/>
     </extensions>
     <extensions defaultExtensionNs="org.jetbrains.id.names.suggesting">
         <variableNamesContributor implementation="org.jetbrains.id.names.suggesting.contributors.FileVariableNamesContributor"/>

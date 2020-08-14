@@ -108,4 +108,8 @@ tasks {
         token(System.getenv("PUBLISH_TOKEN"))
         channels(pluginVersion.split('-').getOrElse(1) { "default" }.split('.').first())
     }
+
+    runIde {
+        jvmArgs = listOf("-Xmx8G")
+    }
 }

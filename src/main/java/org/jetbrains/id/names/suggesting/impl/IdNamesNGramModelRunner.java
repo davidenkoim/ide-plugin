@@ -17,7 +17,6 @@ import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.util.ObjectUtils;
-import com.intellij.util.ResourceUtil;
 import kotlin.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -36,7 +35,6 @@ import java.util.stream.Stream;
 import static java.lang.Integer.max;
 
 public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
-    private static final String MODEL_DIRECTORY = "C:\\Users\\Igor.Davidenko\\IdeaProjects\\ide-plugin\\model";
     private static final int PREDICTION_CUTOFF = 10;
     private static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
 
@@ -150,6 +148,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         final double total = files.size();
         for (VirtualFile file : files) {
             ObjectUtils.consumeIfNotNull(PsiManager.getInstance(project).findFile(file), this::learnPsiFile);
+            progressIndicator.setText2(file.getPath());
             progressIndicator.setFraction(++progress / total);
         }
     }
@@ -188,55 +187,79 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return prob * conf + (1 - conf) / myVocabulary.size();
     }
 
-    public void save() {
-        save(MODEL_DIRECTORY);
+    private static final String MODEL_DIRECTORY = "C:\\Users\\Igor.Davidenko\\IdeaProjects\\ide-plugin\\model_intellij";
+
+    public void save(@Nullable ProgressIndicator progressIndicator) {
+        save(MODEL_DIRECTORY, progressIndicator);
     }
 
-    public void save(@NotNull String model_directory) {
+    public void save(@NotNull String model_directory, @Nullable ProgressIndicator progressIndicator) {
+        if (progressIndicator != null) {
+            progressIndicator.setText(IdNamesSuggestingBundle.message("saving.global.model"));
+            progressIndicator.setText2("");
+            progressIndicator.setIndeterminate(true);
+        }
+        File counterFile = new File(model_directory + "\\counter.ser");
+        File rememberedVariablesFile = new File(model_directory + "\\rememberedVariables.ser");
+        File vocabularyFile = new File(model_directory + "\\vocabulary.ser");
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream(model_directory + "\\counter.ser");
+            counterFile.getParentFile().mkdir();
+            counterFile.createNewFile();
+            FileOutputStream fileOutputStream = new FileOutputStream(counterFile);
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
             myModel.getCounter().writeExternal(objectOutputStream);
             objectOutputStream.close();
             fileOutputStream.close();
 
-            fileOutputStream = new FileOutputStream(model_directory + "\\rememberedVariables.ser");
+            rememberedVariablesFile.createNewFile();
+            fileOutputStream = new FileOutputStream(rememberedVariablesFile);
             objectOutputStream = new ObjectOutputStream(fileOutputStream);
             objectOutputStream.writeObject(myRememberedVariables);
             objectOutputStream.close();
             fileOutputStream.close();
 
-            File vocabularyFile = new File(model_directory + "\\vocabulary.ser");
+            vocabularyFile.createNewFile();
             VocabularyRunner.INSTANCE.write(myVocabulary, vocabularyFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void load() {
-        load(MODEL_DIRECTORY);
+    public void load(@Nullable ProgressIndicator progressIndicator) {
+        load(MODEL_DIRECTORY, progressIndicator);
     }
 
-    public void load(@NotNull String model_directory) {
-        try {
-            FileInputStream fileInputStream = new FileInputStream(model_directory + "\\counter.ser");
-            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-            myModel.getCounter().readExternal(objectInputStream);
-            objectInputStream.close();
-            fileInputStream.close();
+    public void load(@NotNull String model_directory, @Nullable ProgressIndicator progressIndicator) {
+        File counterFile = new File(model_directory + "\\counter.ser");
+        File rememberedVariablesFile = new File(model_directory + "\\rememberedVariables.ser");
+        File vocabularyFile = new File(model_directory + "\\vocabulary.ser");
+        if (counterFile.exists() && rememberedVariablesFile.exists() && vocabularyFile.exists()) {
+            try {
+                if (progressIndicator != null) {
+                    progressIndicator.setIndeterminate(true);
+                    progressIndicator.setText(IdNamesSuggestingBundle.message("loading.file", counterFile.getName()));
+                }
+                FileInputStream fileInputStream = new FileInputStream(counterFile);
+                ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+                myModel.getCounter().readExternal(objectInputStream);
+                objectInputStream.close();
+                fileInputStream.close();
 
-            fileInputStream = new FileInputStream(model_directory + "\\rememberedVariables.ser");
-            objectInputStream = new ObjectInputStream(fileInputStream);
-            myRememberedVariables = (HashSet) objectInputStream.readObject();
-            objectInputStream.close();
-            fileInputStream.close();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        File file = new File(model_directory + "\\vocabulary.ser");
-        if (file.exists()) {
-            myVocabulary = VocabularyManager.read(file);
+                if (progressIndicator != null) {
+                    progressIndicator.setText(IdNamesSuggestingBundle.message("loading.file", rememberedVariablesFile.getName()));
+                }
+                fileInputStream = new FileInputStream(rememberedVariablesFile);
+                objectInputStream = new ObjectInputStream(fileInputStream);
+                myRememberedVariables = (HashSet) objectInputStream.readObject();
+                objectInputStream.close();
+                fileInputStream.close();
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            if (progressIndicator != null) {
+                progressIndicator.setText(IdNamesSuggestingBundle.message("loading.file", vocabularyFile.getName()));
+            }
+            myVocabulary = VocabularyManager.read(vocabularyFile);
         }
     }
 }
