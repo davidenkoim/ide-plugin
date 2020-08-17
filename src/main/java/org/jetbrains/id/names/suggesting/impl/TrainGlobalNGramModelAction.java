@@ -1,7 +1,9 @@
 package org.jetbrains.id.names.suggesting.impl;
 
 import com.intellij.ide.highlighter.JavaFileType;
-import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationType;
+import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.progress.ProgressIndicator;
@@ -15,6 +17,9 @@ import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager;
 import org.jetbrains.id.names.suggesting.api.AbstractTrainModelAction;
 
+import java.time.Duration;
+import java.time.Instant;
+
 public class TrainGlobalNGramModelAction extends AbstractTrainModelAction {
     @Override
     protected void doActionPerformed(@NotNull AnActionEvent e) {
@@ -26,7 +31,17 @@ public class TrainGlobalNGramModelAction extends AbstractTrainModelAction {
             public void run(@NotNull ProgressIndicator progressIndicator) {
                 progressIndicator.setText(IdNamesSuggestingBundle.message("training.progress.indicator.text", project.getName()));
                 ReadAction.nonBlocking(() -> {
+                    Instant start = Instant.now();
                     modelManager.trainGlobalNGramModel(project, progressIndicator);
+                    Instant end = Instant.now();
+                    Notifications.Bus.notify(
+                            new Notification(IdNamesSuggestingBundle.message("name"),
+                                    "Training of global model is completed.",
+                                    String.format("Time of training on %s: %dms.",
+                                            project.getName(),
+                                            Duration.between(start, end).toMillis()),
+                                    NotificationType.INFORMATION),
+                            project);
                 })
                         .inSmartMode(project)
                         .executeSynchronously();
