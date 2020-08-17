@@ -3,9 +3,9 @@ package org.jetbrains.id.names.suggesting;
 public class Prediction{
     private final String myName;
     private final double myProbability;
-    private final double myPriority;
+    private final int myPriority;
 
-    public Prediction(String name, double probability, double priority) {
+    public Prediction(String name, double probability, int priority) {
         myName = name;
         myProbability = probability;
         myPriority = priority;
@@ -14,7 +14,7 @@ public class Prediction{
     public Prediction(String name, double probability) {
         myName = name;
         myProbability = probability;
-        myPriority = 1.;
+        myPriority = 1;
     }
 
     public String getName() {
@@ -25,7 +25,7 @@ public class Prediction{
         return myProbability;
     }
 
-    public double getPriority() {
+    public int getPriority() {
         return myPriority;
     }
 

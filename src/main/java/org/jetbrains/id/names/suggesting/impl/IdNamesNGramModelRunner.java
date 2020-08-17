@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingService;
 import org.jetbrains.id.names.suggesting.Prediction;
 import org.jetbrains.id.names.suggesting.VocabularyManager;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
@@ -35,7 +36,6 @@ import java.util.stream.Stream;
 import static java.lang.Integer.max;
 
 public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
-    private static final int PREDICTION_CUTOFF = 10;
     private static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
 
     static {
@@ -54,6 +54,10 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return SUPPORTED_TYPES.stream().anyMatch(type -> type.isInstance(identifierOwner));
     }
 
+    public int getModelPriority(){
+        return this.myVocabulary.size();
+    }
+
     @Override
     public List<Prediction> suggestNames(@NotNull PsiNameIdentifierOwner identifierOwner) {
         if (!isSupported(identifierOwner)) {
@@ -66,7 +70,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .flatMap(usage -> predictUsageName(usage, getIdTypeFilter(identifierOwner)))
                 .sorted((p1, p2) -> -Double.compare(p1.getProbability(), p2.getProbability()))
                 .distinct()
-                .limit(PREDICTION_CUTOFF)
+                .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
                 .collect(Collectors.toList());
         allUsageNGramIndices.forEach(this::learnUsage);
         return predictionList;
@@ -87,21 +91,21 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .stream();
     }
 
-    private Stream<Prediction> predictUsageName(@NotNull List<Integer> usageNGramIndicies,
+    private Stream<Prediction> predictUsageName(@NotNull List<Integer> usageNGramIndices,
                                                 @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
-        return myModel.predictToken(usageNGramIndicies, myModel.getOrder() - 1)
+        return myModel.predictToken(usageNGramIndices, myModel.getOrder() - 1)
                 .entrySet()
                 .stream()
                 .filter(idTypeFilter)
-                .map(e -> new Prediction(myVocabulary.toWord(e.getKey()), toProb(e.getValue())));
+                .map(e -> new Prediction(myVocabulary.toWord(e.getKey()), toProb(e.getValue()), getModelPriority()));
     }
 
-    private void forgetUsage(@NotNull List<Integer> usageNGramIndicies) {
-        myModel.forgetToken(usageNGramIndicies, myModel.getOrder() - 1);
+    private void forgetUsage(@NotNull List<Integer> usageNGramIndices) {
+        myModel.forgetToken(usageNGramIndices, myModel.getOrder() - 1);
     }
 
-    private void learnUsage(@NotNull List<Integer> usageNGramIndicies) {
-        myModel.learnToken(usageNGramIndicies, myModel.getOrder() - 1);
+    private void learnUsage(@NotNull List<Integer> usageNGramIndices) {
+        myModel.learnToken(usageNGramIndices, myModel.getOrder() - 1);
     }
 
     private @NotNull Predicate<Map.Entry<Integer, ?>> getIdTypeFilter(@NotNull PsiNameIdentifierOwner identifierOwner) {
@@ -187,7 +191,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return prob * conf + (1 - conf) / myVocabulary.size();
     }
 
-    private static final String MODEL_DIRECTORY = "C:\\Users\\Igor.Davidenko\\IdeaProjects\\ide-plugin\\model_intellij";
+    private static final String MODEL_DIRECTORY = "C:\\Users\\Igor.Davidenko\\IdeaProjects\\ide-plugin\\model_java-projects";
 
     public void save(@Nullable ProgressIndicator progressIndicator) {
         save(MODEL_DIRECTORY, progressIndicator);
