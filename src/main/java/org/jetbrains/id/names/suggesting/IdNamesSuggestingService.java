@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 public class IdNamesSuggestingService {
     public static final int PREDICTION_CUTOFF = 10;
+
     public static IdNamesSuggestingService getInstance(@NotNull Project project) {
         return ServiceManager.getService(project, IdNamesSuggestingService.class);
     }
@@ -38,12 +39,9 @@ public class IdNamesSuggestingService {
         Instant timerEnd = Instant.now();
         notifications.append(String.format("Total time: %.3fms.\n",
                 Duration.between(timerStart, timerEnd).toNanos() / 1_000_000.));
-        Notifications.Bus.notify(
-                new Notification(IdNamesSuggestingBundle.message("name"),
-                        "Time of contribution:",
-                        notifications.toString(),
-                        NotificationType.INFORMATION),
-                variable.getProject());
+        Utils.notify(variable.getProject(),
+                "Time of contribution:",
+                notifications.toString());
         return result;
     }
 

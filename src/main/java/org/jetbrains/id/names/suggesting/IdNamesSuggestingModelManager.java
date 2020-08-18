@@ -38,10 +38,10 @@ public class IdNamesSuggestingModelManager {
         putModelRunner(ProjectVariableNamesContributor.class.getName(), modelRunner);
     }
 
-    public void trainGlobalNGramModel(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
+    public double trainGlobalNGramModel(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
         IdNamesNGramModelRunner modelRunner = (IdNamesNGramModelRunner) IdNamesSuggestingModelManager.getInstance(project)
                 .getModelRunner(GlobalVariableNamesContributor.class.getName());
         modelRunner.learnProject(project, progressIndicator);
-        modelRunner.save(progressIndicator);
+        return modelRunner.save(progressIndicator);
     }
 }

@@ -8,6 +8,7 @@ import com.intellij.completion.ngram.slp.modeling.ngram.NGramModel;
 import com.intellij.completion.ngram.slp.translating.Vocabulary;
 import com.intellij.completion.ngram.slp.translating.VocabularyRunner;
 import com.intellij.ide.highlighter.JavaFileType;
+import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
@@ -191,13 +192,13 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return prob * conf + (1 - conf) / myVocabulary.size();
     }
 
-    private static final String MODEL_DIRECTORY = "C:\\Users\\Igor.Davidenko\\IdeaProjects\\ide-plugin\\model_java-projects";
+    private static final String MODEL_DIRECTORY = PathManager.getSystemPath() + "\\model";
 
-    public void save(@Nullable ProgressIndicator progressIndicator) {
-        save(MODEL_DIRECTORY, progressIndicator);
+    public double save(@Nullable ProgressIndicator progressIndicator) {
+        return save(MODEL_DIRECTORY, progressIndicator);
     }
 
-    public void save(@NotNull String model_directory, @Nullable ProgressIndicator progressIndicator) {
+    public double save(@NotNull String model_directory, @Nullable ProgressIndicator progressIndicator) {
         if (progressIndicator != null) {
             progressIndicator.setText(IdNamesSuggestingBundle.message("saving.global.model"));
             progressIndicator.setText2("");
@@ -227,6 +228,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return (counterFile.length() + vocabularyFile.length() + rememberedVariablesFile.length()) / (1024. * 1024);
     }
 
     public void load(@Nullable ProgressIndicator progressIndicator) {
@@ -257,13 +259,14 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 myRememberedVariables = (HashSet) objectInputStream.readObject();
                 objectInputStream.close();
                 fileInputStream.close();
+
+                if (progressIndicator != null) {
+                    progressIndicator.setText(IdNamesSuggestingBundle.message("loading.file", vocabularyFile.getName()));
+                }
+                myVocabulary = VocabularyManager.read(vocabularyFile);
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
-            if (progressIndicator != null) {
-                progressIndicator.setText(IdNamesSuggestingBundle.message("loading.file", vocabularyFile.getName()));
-            }
-            myVocabulary = VocabularyManager.read(vocabularyFile);
         }
     }
 }
