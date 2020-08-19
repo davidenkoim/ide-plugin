@@ -7,7 +7,6 @@ import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.StartupActivity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
 

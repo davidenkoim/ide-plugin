@@ -38,13 +38,20 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     /**
      * {@link HashMap} from {@link Class} of identifier to {@link HashSet} of remembered identifiers of this {@link Class}.
      */
-    private static HashMap<Class<? extends PsiNameIdentifierOwner>, HashSet<Integer>> myRememberedIdentifiers = new HashMap<>();
+    private HashMap<Class<? extends PsiNameIdentifierOwner>, HashSet<Integer>> myRememberedIdentifiers = new HashMap<>();
 
     private final NGramModel myModel;
     private Vocabulary myVocabulary = new Vocabulary();
 
-    public IdNamesNGramModelRunner(boolean isLargeCorpora) {
+    public IdNamesNGramModelRunner(List<Class<? extends PsiNameIdentifierOwner>> supportedTypes, boolean isLargeCorpora) {
         myModel = new JMModel(6, 0.5, isLargeCorpora ? new GigaCounter() : new ArrayTrieCounter());
+        this.setSupportedTypes(supportedTypes);
+    }
+
+    public void setSupportedTypes(List<Class<? extends PsiNameIdentifierOwner>> supportedTypes) {
+        for (Class<? extends PsiNameIdentifierOwner> supportedType : supportedTypes) {
+            myRememberedIdentifiers.putIfAbsent(supportedType, new HashSet<>());
+        }
     }
 
     public int getModelPriority() {
@@ -94,7 +101,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
 
     private @Nullable Class<? extends PsiNameIdentifierOwner> getSupportedParentClass(@NotNull Class<? extends PsiNameIdentifierOwner> identifierClass) {
         for (Class<? extends PsiNameIdentifierOwner> c : myRememberedIdentifiers.keySet()) {
-            if (identifierClass.isAssignableFrom(c)) {
+            if (c.isAssignableFrom(identifierClass)) {
                 return c;
             }
         }
@@ -131,10 +138,12 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     private void rememberIdName(PsiElement element) {
-        if (element instanceof PsiIdentifier) {
+        if (element instanceof PsiIdentifier && element.getParent() instanceof PsiNameIdentifierOwner) {
             PsiNameIdentifierOwner parent = (PsiNameIdentifierOwner) element.getParent();
             Class<? extends PsiNameIdentifierOwner> parentClass = getSupportedParentClass(parent.getClass());
-            myRememberedIdentifiers.get(parentClass).add(myVocabulary.toIndex(element.getText()));
+            if (parentClass != null) {
+                myRememberedIdentifiers.get(parentClass).add(myVocabulary.toIndex(element.getText()));
+            }
         }
     }
 
@@ -163,7 +172,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
             progressIndicator.setIndeterminate(true);
         }
         File counterFile = model_directory.resolve("counter.ser").toFile();
-        File rememberedVariablesFile = model_directory.resolve("rememberedVariables.ser").toFile();
+        File rememberedVariablesFile = model_directory.resolve("rememberedIdentifiers.ser").toFile();
         File vocabularyFile = model_directory.resolve("vocabulary.ser").toFile();
         try {
             counterFile.getParentFile().mkdir();
@@ -195,7 +204,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
 
     public void load(@NotNull Path model_directory, @Nullable ProgressIndicator progressIndicator) {
         File counterFile = model_directory.resolve("counter.ser").toFile();
-        File rememberedVariablesFile = model_directory.resolve("rememberedVariables.ser").toFile();
+        File rememberedVariablesFile = model_directory.resolve("rememberedIdentifiers.ser").toFile();
         File vocabularyFile = model_directory.resolve("vocabulary.ser").toFile();
         if (counterFile.exists() && rememberedVariablesFile.exists() && vocabularyFile.exists()) {
             try {

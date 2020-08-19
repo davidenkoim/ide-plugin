@@ -1,7 +1,6 @@
 package org.jetbrains.id.names.suggesting.contributors;
 
 import com.google.common.collect.Lists;
-import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
 import com.intellij.psi.search.searches.ReferencesSearch;
@@ -21,7 +20,7 @@ import java.util.stream.Stream;
 import static java.lang.Integer.max;
 
 public abstract class NGramVariableNamesContributor implements VariableNamesContributor {
-    private static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
+    public static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
 
     static {
         SUPPORTED_TYPES.add(PsiVariable.class);

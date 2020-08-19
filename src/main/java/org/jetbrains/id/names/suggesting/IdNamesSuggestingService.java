@@ -26,7 +26,9 @@ public class IdNamesSuggestingService {
         for (final VariableNamesContributor modelContributor : VariableNamesContributor.EP_NAME.getExtensions()) {
             Instant start = Instant.now();
             modelContributor.contribute(variable, nameSuggestions);
-            prioritiesSum += nameSuggestions.get(nameSuggestions.size() - 1).getPriority();
+            if (!nameSuggestions.isEmpty()) {
+                prioritiesSum += nameSuggestions.get(nameSuggestions.size() - 1).getPriority();
+            }
             Instant end = Instant.now();
             notifications.append(String.format("%s : %.3fms.\n",
                     modelContributor.getClass().getSimpleName(),
