@@ -56,7 +56,6 @@ dependencies {
     implementation("org.junit.jupiter:junit-jupiter-api:5.5.1")
     implementation("org.junit.jupiter:junit-jupiter-engine:5.5.1")
     implementation("org.jetbrains.intellij.deps.completion:ngram-slp:0.0.2")
-    implementation("org.redundent:kotlin-xml-builder:1.6.0")
 }
 
 

@@ -29,6 +29,8 @@ import org.jetbrains.id.names.suggesting.VocabularyManager;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
 
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -192,21 +194,21 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return prob * conf + (1 - conf) / myVocabulary.size();
     }
 
-    private static final String MODEL_DIRECTORY = PathManager.getSystemPath() + "\\model";
+    private static final Path MODEL_DIRECTORY = Paths.get(PathManager.getSystemPath(), "model");
 
     public double save(@Nullable ProgressIndicator progressIndicator) {
         return save(MODEL_DIRECTORY, progressIndicator);
     }
 
-    public double save(@NotNull String model_directory, @Nullable ProgressIndicator progressIndicator) {
+    public double save(@NotNull Path model_directory, @Nullable ProgressIndicator progressIndicator) {
         if (progressIndicator != null) {
             progressIndicator.setText(IdNamesSuggestingBundle.message("saving.global.model"));
             progressIndicator.setText2("");
             progressIndicator.setIndeterminate(true);
         }
-        File counterFile = new File(model_directory + "\\counter.ser");
-        File rememberedVariablesFile = new File(model_directory + "\\rememberedVariables.ser");
-        File vocabularyFile = new File(model_directory + "\\vocabulary.ser");
+        File counterFile = model_directory.resolve("counter.ser").toFile();
+        File rememberedVariablesFile = model_directory.resolve("rememberedVariables.ser").toFile();
+        File vocabularyFile = model_directory.resolve("vocabulary.ser").toFile();
         try {
             counterFile.getParentFile().mkdir();
             counterFile.createNewFile();
@@ -235,10 +237,10 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         load(MODEL_DIRECTORY, progressIndicator);
     }
 
-    public void load(@NotNull String model_directory, @Nullable ProgressIndicator progressIndicator) {
-        File counterFile = new File(model_directory + "\\counter.ser");
-        File rememberedVariablesFile = new File(model_directory + "\\rememberedVariables.ser");
-        File vocabularyFile = new File(model_directory + "\\vocabulary.ser");
+    public void load(@NotNull Path model_directory, @Nullable ProgressIndicator progressIndicator) {
+        File counterFile = model_directory.resolve("counter.ser").toFile();
+        File rememberedVariablesFile = model_directory.resolve("rememberedVariables.ser").toFile();
+        File vocabularyFile = model_directory.resolve("vocabulary.ser").toFile();
         if (counterFile.exists() && rememberedVariablesFile.exists() && vocabularyFile.exists()) {
             try {
                 if (progressIndicator != null) {

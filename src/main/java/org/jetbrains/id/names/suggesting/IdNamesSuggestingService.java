@@ -1,8 +1,5 @@
 package org.jetbrains.id.names.suggesting;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationType;
-import com.intellij.notification.Notifications;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiVariable;
@@ -39,7 +36,7 @@ public class IdNamesSuggestingService {
         Instant timerEnd = Instant.now();
         notifications.append(String.format("Total time: %.3fms.\n",
                 Duration.between(timerStart, timerEnd).toNanos() / 1_000_000.));
-        Utils.notify(variable.getProject(),
+        NotificationsUtil.notify(variable.getProject(),
                 "Time of contribution:",
                 notifications.toString());
         return result;

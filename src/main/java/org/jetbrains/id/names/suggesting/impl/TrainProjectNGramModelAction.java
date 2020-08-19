@@ -12,7 +12,7 @@ import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager;
-import org.jetbrains.id.names.suggesting.Utils;
+import org.jetbrains.id.names.suggesting.NotificationsUtil;
 import org.jetbrains.id.names.suggesting.api.AbstractTrainModelAction;
 
 import java.time.Duration;
@@ -32,7 +32,7 @@ public class TrainProjectNGramModelAction extends AbstractTrainModelAction {
                     Instant start = Instant.now();
                     modelManager.trainProjectNGramModel(project, progressIndicator);
                     Instant end = Instant.now();
-                    Utils.notify(project,
+                    NotificationsUtil.notify(project,
                             "Training of project model is completed.",
                             String.format("Time of training on %s: %dms.",
                                     project.getName(),
