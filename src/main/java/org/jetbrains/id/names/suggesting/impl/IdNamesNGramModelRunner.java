@@ -1,6 +1,5 @@
 package org.jetbrains.id.names.suggesting.impl;
 
-import com.google.common.collect.Lists;
 import com.intellij.completion.ngram.slp.counting.giga.GigaCounter;
 import com.intellij.completion.ngram.slp.counting.trie.ArrayTrieCounter;
 import com.intellij.completion.ngram.slp.modeling.ngram.JMModel;
@@ -16,7 +15,6 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.util.ObjectUtils;
 import kotlin.Pair;
 import org.apache.commons.lang3.StringUtils;
@@ -36,41 +34,30 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.lang.Integer.max;
-
 public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
-    private static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
-
-    static {
-        SUPPORTED_TYPES.add(PsiVariable.class);
-    }
+    /**
+     * {@link HashMap} from {@link Class} of identifier to {@link HashSet} of remembered identifiers of this {@link Class}.
+     */
+    private static HashMap<Class<? extends PsiNameIdentifierOwner>, HashSet<Integer>> myRememberedIdentifiers = new HashMap<>();
 
     private final NGramModel myModel;
     private Vocabulary myVocabulary = new Vocabulary();
-    private HashSet<Integer> myRememberedVariables = new HashSet<>();
 
     public IdNamesNGramModelRunner(boolean isLargeCorpora) {
         myModel = new JMModel(6, 0.5, isLargeCorpora ? new GigaCounter() : new ArrayTrieCounter());
     }
 
-    private static boolean isSupported(@NotNull PsiNameIdentifierOwner identifierOwner) {
-        return SUPPORTED_TYPES.stream().anyMatch(type -> type.isInstance(identifierOwner));
-    }
-
-    public int getModelPriority(){
+    public int getModelPriority() {
         return this.myVocabulary.size();
     }
 
     @Override
-    public List<Prediction> suggestNames(@NotNull PsiNameIdentifierOwner identifierOwner) {
-        if (!isSupported(identifierOwner)) {
-            return new ArrayList<>();
-        }
-        List<List<Integer>> allUsageNGramIndices = findUsageNGramIndices(identifierOwner);
+    public List<Prediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams) {
+        List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
         allUsageNGramIndices.forEach(this::forgetUsage);
         List<Prediction> predictionList = allUsageNGramIndices
                 .stream()
-                .flatMap(usage -> predictUsageName(usage, getIdTypeFilter(identifierOwner)))
+                .flatMap(usage -> predictUsageName(usage, getIdTypeFilter(identifierClass)))
                 .sorted((p1, p2) -> -Double.compare(p1.getProbability(), p2.getProbability()))
                 .distinct()
                 .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
@@ -79,19 +66,8 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return predictionList;
     }
 
-    private List<List<Integer>> findUsageNGramIndices(PsiNameIdentifierOwner identifierOwner) {
-        Stream<PsiReference> elementUsages = findReferences(identifierOwner);
-        return Stream.concat(Stream.of(identifierOwner), elementUsages)
-                .map(IdNamesNGramModelRunner::getIdentifier)
-                .filter(Objects::nonNull)
-                .map(this::getNGramIndices)
-                .collect(Collectors.toList());
-    }
-
-    public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner) {
-        return ReferencesSearch.search(identifierOwner)
-                .findAll()
-                .stream();
+    private @NotNull List<List<Integer>> nGramToIndices(@NotNull List<List<String>> usageNGrams) {
+        return usageNGrams.stream().map(myVocabulary::toIndices).collect(Collectors.toList());
     }
 
     private Stream<Prediction> predictUsageName(@NotNull List<Integer> usageNGramIndices,
@@ -111,40 +87,18 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         myModel.learnToken(usageNGramIndices, myModel.getOrder() - 1);
     }
 
-    private @NotNull Predicate<Map.Entry<Integer, ?>> getIdTypeFilter(@NotNull PsiNameIdentifierOwner identifierOwner) {
-        if (identifierOwner instanceof PsiVariable) {
-            return entry -> myRememberedVariables.contains(entry.getKey());
-        }
-        return entry -> false;
+    private @NotNull Predicate<Map.Entry<Integer, ?>> getIdTypeFilter(@NotNull Class<? extends PsiNameIdentifierOwner> identifierClass) {
+        Class<? extends PsiNameIdentifierOwner> parentClass = getSupportedParentClass(identifierClass);
+        return entry -> parentClass != null && myRememberedIdentifiers.get(parentClass).contains(entry.getKey());
     }
 
-    private static @Nullable PsiIdentifier getIdentifier(Object element) {
-        if (element instanceof PsiNameIdentifierOwner) {
-            element = ((PsiNameIdentifierOwner) element).getNameIdentifier();
-        } else if (element instanceof PsiReferenceExpression) {
-            element = ((PsiReferenceExpression) element).getReferenceNameElement();
-        }
-        return ObjectUtils.tryCast(element, PsiIdentifier.class);
-    }
-
-    private List<Integer> getNGramIndices(@NotNull PsiElement element) {
-        return myVocabulary.toIndices(getNGram(element));
-    }
-
-    private List<String> getNGram(@NotNull PsiElement element) {
-        int order = myModel.getOrder();
-        final List<String> tokens = new ArrayList<>();
-        for (PsiElement token : SyntaxTraverser
-                .revPsiTraverser()
-                .withRoot(element.getContainingFile())
-                .onRange(new TextRange(0, max(0, element.getTextOffset())))
-                .filter(IdNamesNGramModelRunner::shouldLex)) {
-            tokens.add(token.getText());
-            if (--order < 1) {
-                break;
+    private @Nullable Class<? extends PsiNameIdentifierOwner> getSupportedParentClass(@NotNull Class<? extends PsiNameIdentifierOwner> identifierClass) {
+        for (Class<? extends PsiNameIdentifierOwner> c : myRememberedIdentifiers.keySet()) {
+            if (identifierClass.isAssignableFrom(c)) {
+                return c;
             }
         }
-        return Lists.reverse(tokens);
+        return null;
     }
 
     public void learnProject(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
@@ -177,12 +131,14 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     private void rememberIdName(PsiElement element) {
-        if (element instanceof PsiIdentifier && element.getParent() instanceof PsiVariable) {
-            myRememberedVariables.add(myVocabulary.toIndex(element.getText()));
+        if (element instanceof PsiIdentifier) {
+            PsiNameIdentifierOwner parent = (PsiNameIdentifierOwner) element.getParent();
+            Class<? extends PsiNameIdentifierOwner> parentClass = getSupportedParentClass(parent.getClass());
+            myRememberedIdentifiers.get(parentClass).add(myVocabulary.toIndex(element.getText()));
         }
     }
 
-    private static boolean shouldLex(@NotNull PsiElement element) {
+    public static boolean shouldLex(@NotNull PsiElement element) {
         return element.getFirstChild() == null // is leaf
                 && !StringUtils.isBlank(element.getText())
                 && !(element instanceof PsiComment);
@@ -221,7 +177,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
             rememberedVariablesFile.createNewFile();
             fileOutputStream = new FileOutputStream(rememberedVariablesFile);
             objectOutputStream = new ObjectOutputStream(fileOutputStream);
-            objectOutputStream.writeObject(myRememberedVariables);
+            objectOutputStream.writeObject(myRememberedIdentifiers);
             objectOutputStream.close();
             fileOutputStream.close();
 
@@ -258,7 +214,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 }
                 fileInputStream = new FileInputStream(rememberedVariablesFile);
                 objectInputStream = new ObjectInputStream(fileInputStream);
-                myRememberedVariables = (HashSet) objectInputStream.readObject();
+                myRememberedIdentifiers = (HashMap) objectInputStream.readObject();
                 objectInputStream.close();
                 fileInputStream.close();
 
@@ -270,5 +226,9 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 e.printStackTrace();
             }
         }
+    }
+
+    public int getOrder() {
+        return myModel.getOrder();
     }
 }
