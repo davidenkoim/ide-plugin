@@ -59,6 +59,7 @@ public class IdNamesSuggestingService {
                 .stream()
                 .sorted((e1, e2) -> -Double.compare(e1.getValue(), e2.getValue()))
                 .limit(PREDICTION_CUTOFF)
+                .filter(e -> e.getValue() >= 0.001)
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,

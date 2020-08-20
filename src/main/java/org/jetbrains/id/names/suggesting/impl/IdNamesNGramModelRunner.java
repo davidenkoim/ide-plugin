@@ -32,7 +32,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     /**
@@ -62,36 +61,75 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     public List<Prediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
         allUsageNGramIndices.forEach(this::forgetUsage);
-        List<Prediction> predictionList = allUsageNGramIndices
-                .stream()
-                .flatMap(usage -> predictUsageName(usage, getIdTypeFilter(identifierClass)))
-                .sorted((p1, p2) -> -Double.compare(p1.getProbability(), p2.getProbability()))
-                .distinct()
-                .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
-                .collect(Collectors.toList());
+        List<Prediction> predictionList = new ArrayList<>();
+        int usagePrioritiesSum = 0;
+        for (List<Integer> usageNGramIndices: allUsageNGramIndices){
+            usagePrioritiesSum += predictUsageName(predictionList, usageNGramIndices, getIdTypeFilter(identifierClass));
+        }
         allUsageNGramIndices.forEach(this::learnUsage);
-        return predictionList;
+        return rankUsagePredictions(predictionList, usagePrioritiesSum);
+    }
+
+    private List<Prediction> rankUsagePredictions(List<Prediction> predictionList, int usagePrioritiesSum) {
+        Map<String, Double> rankedPredictions = new HashMap<>();
+        for (Prediction prediction : predictionList) {
+            Double prob = rankedPredictions.get(prediction.getName());
+            double addition = prediction.getProbability() * prediction.getPriority() / usagePrioritiesSum;
+            if (prob == null) { // If see this prediction for the first time just put it in the map
+                rankedPredictions.put(prediction.getName(), addition);
+            } else {
+                rankedPredictions.put(prediction.getName(), prob + addition);
+            }
+        }
+        return rankedPredictions.entrySet()
+                .stream()
+                .sorted((e1, e2) -> -Double.compare(e1.getValue(), e2.getValue()))
+                .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
+                .map(e -> new Prediction(e.getKey(), e.getValue(), getModelPriority()))
+                .collect(Collectors.toList());
     }
 
     private @NotNull List<List<Integer>> nGramToIndices(@NotNull List<List<String>> usageNGrams) {
         return usageNGrams.stream().map(myVocabulary::toIndices).collect(Collectors.toList());
     }
 
-    private Stream<Prediction> predictUsageName(@NotNull List<Integer> usageNGramIndices,
-                                                @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
-        return myModel.predictToken(usageNGramIndices, myModel.getOrder() - 1)
+    private int predictUsageName(@NotNull List<Prediction> predictionList,
+                                 @NotNull List<Integer> usageNGramIndices,
+                                 @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
+        int usagePriority = getUsagePriority(usageNGramIndices);
+        predictionList.addAll(myModel.predictToken(usageNGramIndices, usageNGramIndices.size() - 1)
                 .entrySet()
                 .stream()
                 .filter(idTypeFilter)
-                .map(e -> new Prediction(myVocabulary.toWord(e.getKey()), toProb(e.getValue()), getModelPriority()));
+                .map(e -> new Prediction(myVocabulary.toWord(e.getKey()),
+                        toProb(e.getValue()),
+                        usagePriority))
+                .sorted((pred1, pred2) -> -Double.compare(pred1.getProbability(), pred2.getProbability()))
+                .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
+                .collect(Collectors.toList()));
+        return usagePriority;
+    }
+
+    private int getUsagePriority(List<Integer> usageNGramIndices) {
+        long priority = 0;
+        long count = 1;
+        for (int index = usageNGramIndices.size() - 2; index >= 0; index--){
+            if (count > 0) {
+                long[] counts = myModel.getCounter().getCounts(usageNGramIndices.subList(index--, usageNGramIndices.size()));
+                count = counts[0];
+            }
+            priority = priority / 2 + count;
+        }
+        return (int) priority;
+//        return 1;
     }
 
     private void forgetUsage(@NotNull List<Integer> usageNGramIndices) {
-        myModel.forgetToken(usageNGramIndices, myModel.getOrder() - 1);
+        myModel.forgetToken(usageNGramIndices, usageNGramIndices.size() - 1);
     }
 
     private void learnUsage(@NotNull List<Integer> usageNGramIndices) {
-        myModel.learnToken(usageNGramIndices, myModel.getOrder() - 1);
+        myModel.learnToken(usageNGramIndices, usageNGramIndices.size() - 1);
     }
 
     private @NotNull Predicate<Map.Entry<Integer, ?>> getIdTypeFilter(@NotNull Class<? extends PsiNameIdentifierOwner> identifierClass) {
