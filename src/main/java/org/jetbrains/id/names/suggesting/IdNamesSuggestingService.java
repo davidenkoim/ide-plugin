@@ -45,6 +45,9 @@ public class IdNamesSuggestingService {
     }
 
     private LinkedHashMap<String, Double> rankSuggestions(List<Prediction> nameSuggestions, int prioritiesSum) {
+        if (prioritiesSum == 0){
+            return new LinkedHashMap<>();
+        }
         Map<String, Double> rankedSuggestions = new HashMap<>();
         for (Prediction prediction : nameSuggestions) {
             Double prob = rankedSuggestions.get(prediction.getName());

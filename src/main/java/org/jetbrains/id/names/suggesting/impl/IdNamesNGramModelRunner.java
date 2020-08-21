@@ -71,6 +71,9 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     private List<Prediction> rankUsagePredictions(List<Prediction> predictionList, int usagePrioritiesSum) {
+        if (usagePrioritiesSum == 0){
+            return new ArrayList<>();
+        }
         Map<String, Double> rankedPredictions = new HashMap<>();
         for (Prediction prediction : predictionList) {
             Double prob = rankedPredictions.get(prediction.getName());
