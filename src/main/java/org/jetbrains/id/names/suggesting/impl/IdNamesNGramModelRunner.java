@@ -71,9 +71,6 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     private List<Prediction> rankUsagePredictions(List<Prediction> predictionList, int usagePrioritiesSum) {
-        if (usagePrioritiesSum == 0){
-            return new ArrayList<>();
-        }
         Map<String, Double> rankedPredictions = new HashMap<>();
         for (Prediction prediction : predictionList) {
             Double prob = rankedPredictions.get(prediction.getName());
@@ -115,16 +112,15 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
 
     private int getUsagePriority(List<Integer> usageNGramIndices) {
         long priority = 0;
-        long count = 1;
+        long contextCount = 1;
         for (int index = usageNGramIndices.size() - 2; index >= 0; index--){
-            if (count > 0) {
-                long[] counts = myModel.getCounter().getCounts(usageNGramIndices.subList(index--, usageNGramIndices.size()));
-                count = counts[0];
+            if (contextCount > 0) {
+                long[] counts = myModel.getCounter().getCounts(usageNGramIndices.subList(index, usageNGramIndices.size()));
+                contextCount = counts[1];
             }
-            priority = priority / 2 + count;
+            priority = priority / 2 + contextCount;
         }
-        return (int) priority;
-//        return 1;
+        return Math.max(1, (int) priority);
     }
 
     private void forgetUsage(@NotNull List<Integer> usageNGramIndices) {
