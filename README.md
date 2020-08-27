@@ -10,7 +10,7 @@ To be done.
 
 ## Installation
 
-1. In Intellij IDEA add custom plugin repository `https://buildserver.labs.intellij.net/repository/download/ijplatform_IntelliJProjectDependencies_CodeCompletionProjects_IdentifiersNamesSuggesting_BuildPlugin/lastSuccessful/updatePlugins.xml`. [Instruction](https://www.jetbrains.com/help/idea/managing-plugins.html#repos)
+1. In Intellij IDEA add custom plugin repository `https://buildserver.labs.intellij.net/guestAuth/repository/download/ijplatform_IntelliJProjectDependencies_CodeCompletionProjects_IdentifiersNamesSuggesting_BuildPlugin/lastSuccessful/updatePlugins.xml`. [Instruction](https://www.jetbrains.com/help/idea/managing-plugins.html#repos)
 2. Install plugin `Id Names Suggesting` in Marketplace.
 
 ## Usage
