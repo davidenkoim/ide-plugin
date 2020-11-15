@@ -15,7 +15,9 @@ To be done.
 
 ## Usage
 
-When a caret stands on a variable you can click `Alt+Enter` and choose `Suggest variable's name`. 
+- Go to `Analyze/Train Project Id Model` to train model on an opened project.
+
+- When a caret stands on a variable you can click `Alt+Enter` and choose `Suggest variable name`. 
 Plugin will show you a list of consistent names for this variable.
 
 ## Features
