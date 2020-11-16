@@ -35,10 +35,6 @@
         <inspectionToolProvider implementation="inspections.ifstatement.IfStatementProvider"/>
 
         <applicationService serviceImplementation="stats.RenameMethodStatistics"/>
-        <applicationService serviceImplementation="logging.StatsSender"/>
-        <applicationService serviceImplementation="logging.RequestService"/>
-
-        <errorHandler implementation="reporting.GitHubErrorReporter"/>
 <!-- End of Astrid part-->
     </extensions>
     <extensions defaultExtensionNs="org.jetbrains.id.names.suggesting">
