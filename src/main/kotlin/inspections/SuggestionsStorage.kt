@@ -1,15 +1,16 @@
 package inspections
 
-import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiNameIdentifierOwner
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.SmartPointerManager
 
+// TODO: Просто заменил PsiMethod на PsiNameIdentifierOwner. Наверное, стоит делать отдельные хранилища для разных типов идентификаторов.
 class SuggestionsStorage {
     companion object {
-        private var map: HashMap<SmartPsiElementPointer<PsiMethod>, Suggestion> = HashMap()
+        private var map: HashMap<SmartPsiElementPointer<PsiNameIdentifierOwner>, Suggestion> = HashMap()
 
-        fun getSuggestions(method: PsiMethod): Suggestion? {
-            val pointer = SmartPointerManager.getInstance(method.project).createSmartPsiElementPointer(method)
+        fun getSuggestions(element: PsiNameIdentifierOwner): Suggestion? {
+            val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             val suggestion = map.get(pointer)
             if (suggestion != null) {
                 return suggestion
@@ -17,8 +18,8 @@ class SuggestionsStorage {
             return null
         }
 
-        fun put(method: PsiMethod, suggestion: Suggestion) {
-            val pointer = SmartPointerManager.getInstance(method.project).createSmartPsiElementPointer(method)
+        fun put(element: PsiNameIdentifierOwner, suggestion: Suggestion) {
+            val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             if (map.contains(pointer)) {
                 map.replace(pointer, suggestion)
             } else {
@@ -26,19 +27,19 @@ class SuggestionsStorage {
             }
         }
 
-        fun contains(method: PsiMethod): Boolean {
-            val pointer = SmartPointerManager.getInstance(method.project).createSmartPsiElementPointer(method)
+        fun contains(element: PsiNameIdentifierOwner): Boolean {
+            val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             return map.contains(pointer)
         }
 
-        fun needRecalculate(method: PsiMethod): Boolean {
-            val pointer = SmartPointerManager.getInstance(method.project).createSmartPsiElementPointer(method)
+        fun needRecalculate(element: PsiNameIdentifierOwner): Boolean {
+            val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             val suggestion = map.get(pointer) ?: return false
             return suggestion.needRecalculate
         }
 
-        fun recalculateLater(method: PsiMethod) {
-            val pointer = SmartPointerManager.getInstance(method.project).createSmartPsiElementPointer(method)
+        fun recalculateLater(element: PsiNameIdentifierOwner) {
+            val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             if (map.containsKey(pointer)) {
                 val suggestion = map.get(pointer)
                 if (suggestion != null) {
@@ -49,14 +50,14 @@ class SuggestionsStorage {
             return
         }
 
-        fun ignore(method: PsiMethod): Boolean {
-            val pointer = SmartPointerManager.getInstance(method.project).createSmartPsiElementPointer(method)
+        fun ignore(element: PsiNameIdentifierOwner): Boolean {
+            val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             val suggestion = map.get(pointer) ?: return false
             return suggestion.ignore
         }
 
-        fun setIgnore(method: PsiMethod) {
-            val pointer = SmartPointerManager.getInstance(method.project).createSmartPsiElementPointer(method)
+        fun setIgnore(element: PsiNameIdentifierOwner) {
+            val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             if (map.containsKey(pointer)) {
                 val suggestion = map.get(pointer)
                 if (suggestion != null) {

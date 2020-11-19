@@ -36,7 +36,8 @@ public abstract class SuggestIdNamesIntentionBase<T extends PsiNameIdentifierOwn
         processIntention(project, editor, identifierOwner);
     }
 
-    protected abstract @Nullable T getIdentifierOwner(@Nullable PsiElement element);
+//    TODO: Подумать, куда бы это моэно было бы перетащить, чтобы не дергать из SuggestIdNamesIntention.
+    public abstract @Nullable T getIdentifierOwner(@Nullable PsiElement element);
 
     protected abstract void processIntention(@NotNull Project project, Editor editor, @NotNull T identifierOwner);
 }
