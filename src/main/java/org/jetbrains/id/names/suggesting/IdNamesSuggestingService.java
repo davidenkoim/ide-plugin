@@ -19,6 +19,11 @@ public class IdNamesSuggestingService {
     }
 
     public LinkedHashMap<String, Double> suggestVariableName(@NotNull PsiVariable variable) {
+        return suggestVariableName(variable, true);
+    }
+
+    public LinkedHashMap<String, Double> suggestVariableName(@NotNull PsiVariable variable,
+                                                             boolean showNotifications) {
         Instant timerStart = Instant.now();
         List<Prediction> nameSuggestions = new ArrayList<>();
         StringBuilder notifications = new StringBuilder();
@@ -30,17 +35,21 @@ public class IdNamesSuggestingService {
                 prioritiesSum += nameSuggestions.get(nameSuggestions.size() - 1).getPriority();
             }
             Instant end = Instant.now();
-            notifications.append(String.format("%s : %.3fms.\n",
-                    modelContributor.getClass().getSimpleName(),
-                    Duration.between(start, end).toNanos() / 1_000_000.));
+            if (showNotifications) {
+                notifications.append(String.format("%s : %.3fms.\n",
+                        modelContributor.getClass().getSimpleName(),
+                        Duration.between(start, end).toNanos() / 1_000_000.));
+            }
         }
         LinkedHashMap<String, Double> result = rankSuggestions(nameSuggestions, prioritiesSum);
         Instant timerEnd = Instant.now();
-        notifications.append(String.format("Total time: %.3fms.\n",
-                Duration.between(timerStart, timerEnd).toNanos() / 1_000_000.));
-        NotificationsUtil.notify(variable.getProject(),
-                "Time of contribution:",
-                notifications.toString());
+        if (showNotifications) {
+            notifications.append(String.format("Total time: %.3fms.\n",
+                    Duration.between(timerStart, timerEnd).toNanos() / 1_000_000.));
+            NotificationsUtil.notify(variable.getProject(),
+                    "Time of contribution:",
+                    notifications.toString());
+        }
         return result;
     }
 

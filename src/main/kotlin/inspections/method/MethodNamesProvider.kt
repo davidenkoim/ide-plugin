@@ -1,4 +1,4 @@
-package inspections
+package inspections.method
 
 import com.intellij.codeInspection.InspectionToolProvider
 import downloader.Downloader.checkArchive
