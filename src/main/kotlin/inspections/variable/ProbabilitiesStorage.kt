@@ -1,28 +1,28 @@
-package inspections
+package inspections.variable
 
 import com.intellij.psi.PsiNameIdentifierOwner
-import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.SmartPointerManager
+import com.intellij.psi.SmartPsiElementPointer
 
-class SuggestionsStorage {
+class ProbabilitiesStorage {
     companion object {
-        private var map: HashMap<SmartPsiElementPointer<PsiNameIdentifierOwner>, Suggestion> = HashMap()
+        private var map: HashMap<SmartPsiElementPointer<PsiNameIdentifierOwner>, Probability> = HashMap()
 
-        fun getSuggestions(element: PsiNameIdentifierOwner): Suggestion? {
+        fun getProbability(element: PsiNameIdentifierOwner): Probability? {
             val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
-            val suggestion = map.get(pointer)
-            if (suggestion != null) {
-                return suggestion
+            val probability = map.get(pointer)
+            if (probability != null) {
+                return probability
             }
             return null
         }
 
-        fun put(element: PsiNameIdentifierOwner, suggestion: Suggestion) {
+        fun put(element: PsiNameIdentifierOwner, probability: Probability) {
             val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             if (map.contains(pointer)) {
-                map.replace(pointer, suggestion)
+                map.replace(pointer, probability)
             } else {
-                map.put(pointer, suggestion)
+                map.put(pointer, probability)
             }
         }
 
@@ -33,17 +33,17 @@ class SuggestionsStorage {
 
         fun needRecalculate(element: PsiNameIdentifierOwner): Boolean {
             val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
-            val suggestion = map.get(pointer) ?: return false
-            return suggestion.needRecalculate
+            val probability = map.get(pointer) ?: return false
+            return probability.needRecalculate
         }
 
         fun recalculateLater(element: PsiNameIdentifierOwner) {
             val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             if (map.containsKey(pointer)) {
-                val suggestion = map.get(pointer)
-                if (suggestion != null) {
-                    suggestion.setRecalculate()
-                    map.replace(pointer, suggestion)
+                val probability = map.get(pointer)
+                if (probability != null) {
+                    probability.setRecalculate()
+                    map.replace(pointer, probability)
                 }
             }
             return
@@ -51,17 +51,17 @@ class SuggestionsStorage {
 
         fun ignore(element: PsiNameIdentifierOwner): Boolean {
             val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
-            val suggestion = map.get(pointer) ?: return false
-            return suggestion.ignore
+            val probability = map.get(pointer) ?: return false
+            return probability.ignore
         }
 
         fun setIgnore(element: PsiNameIdentifierOwner) {
             val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             if (map.containsKey(pointer)) {
-                val suggestion = map.get(pointer)
-                if (suggestion != null) {
-                    suggestion.setIgnore()
-                    map.replace(pointer, suggestion)
+                val probability = map.get(pointer)
+                if (probability != null) {
+                    probability.setIgnore()
+                    map.replace(pointer, probability)
                 }
             }
             return
