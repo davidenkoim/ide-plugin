@@ -70,6 +70,21 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return rankUsagePredictions(predictionList, usagePrioritiesSum);
     }
 
+    @Override
+    public Pair<Double, Integer> getProbability(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams) {
+        List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
+        allUsageNGramIndices.forEach(this::forgetUsage);
+        double probability = 0.0;
+        int usagePrioritiesSum = 0;
+        for (List<Integer> usageNGramIndices: allUsageNGramIndices){
+            Pair<Double, Integer> probPriority = getUsageProbability(usageNGramIndices);
+            probability += probPriority.getFirst() * probPriority.getSecond();
+            usagePrioritiesSum += probPriority.getSecond();
+        }
+        allUsageNGramIndices.forEach(this::learnUsage);
+        return new Pair<>(probability / usagePrioritiesSum, getModelPriority());
+    }
+
     private List<Prediction> rankUsagePredictions(List<Prediction> predictionList, int usagePrioritiesSum) {
         Map<String, Double> rankedPredictions = new HashMap<>();
         for (Prediction prediction : predictionList) {
@@ -108,6 +123,12 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
                 .collect(Collectors.toList()));
         return usagePriority;
+    }
+
+    private Pair<Double, Integer> getUsageProbability(List<Integer> usageNGramIndices) {
+        int usagePriority = getUsagePriority(usageNGramIndices);
+        double probability = toProb(myModel.modelAtIndex(usageNGramIndices, usageNGramIndices.size() - 1));
+        return new Pair<>(probability, usagePriority);
     }
 
     private int getUsagePriority(List<Integer> usageNGramIndices) {

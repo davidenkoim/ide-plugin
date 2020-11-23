@@ -2,6 +2,7 @@ package org.jetbrains.id.names.suggesting.api;
 
 import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.psi.PsiVariable;
+import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.Prediction;
 
@@ -18,4 +19,6 @@ public interface VariableNamesContributor {
      * @param predictionList:
      */
     void contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList);
+
+    Pair<Double, Integer> getProbability(PsiVariable variable);
 }
