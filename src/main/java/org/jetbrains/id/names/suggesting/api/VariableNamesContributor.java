@@ -17,8 +17,9 @@ public interface VariableNamesContributor {
      *
      * @param variable        : variable which name we want to predict.
      * @param predictionList:
+     * @return priority of contribution
      */
-    void contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList);
+    int contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList);
 
     Pair<Double, Integer> getProbability(PsiVariable variable);
 }
