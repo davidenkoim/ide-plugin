@@ -71,7 +71,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     @Override
-    public Pair<Double, Integer> getProbability(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams) {
+    public Pair<Double, Integer> getProbability(List<List<String>> usageNGrams) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
         allUsageNGramIndices.forEach(this::forgetUsage);
         double probability = 0.0;

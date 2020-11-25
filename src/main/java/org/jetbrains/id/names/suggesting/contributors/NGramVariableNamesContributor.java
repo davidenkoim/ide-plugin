@@ -34,13 +34,14 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
     private int modelOrder;
 
     @Override
-    public void contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList) {
+    public int contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList) {
         IdNamesNGramModelRunner modelRunner = getModelRunnerToContribute(variable);
         if (modelRunner == null || !isSupported(variable)) {
-            return;
+            return 0;
         }
         modelOrder = modelRunner.getOrder();
         predictionList.addAll(modelRunner.suggestNames(variable.getClass(), findUsageNGrams(variable)));
+        return modelRunner.getModelPriority();
     }
 
     @Override
@@ -50,7 +51,7 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
             return new Pair<>(0.0, 0);
         }
         modelOrder = modelRunner.getOrder();
-        return modelRunner.getProbability(variable.getClass(), findUsageNGrams(variable));
+        return modelRunner.getProbability(findUsageNGrams(variable));
     }
 
     public abstract @Nullable IdNamesNGramModelRunner getModelRunnerToContribute(@NotNull PsiVariable variable);
