@@ -49,7 +49,7 @@ class ProbabilitiesStorage {
             return
         }
 
-        fun ignore(element: PsiNameIdentifierOwner): Boolean {
+        fun isIgnored(element: PsiNameIdentifierOwner): Boolean {
             val pointer = SmartPointerManager.getInstance(element.project).createSmartPsiElementPointer(element)
             val probability = map.get(pointer) ?: return false
             return probability.ignore

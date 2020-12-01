@@ -27,7 +27,7 @@ public class SuggestVariableNamesIntention extends SuggestIdNamesIntentionBase<P
     }
 
     @Override
-    public @Nullable PsiVariable getIdentifierOwner(@Nullable PsiElement element) {
+    protected @Nullable PsiVariable getIdentifierOwner(@Nullable PsiElement element) {
         if (element instanceof PsiIdentifier) {
             element = element.getParent();
             if (element instanceof PsiVariable) {
