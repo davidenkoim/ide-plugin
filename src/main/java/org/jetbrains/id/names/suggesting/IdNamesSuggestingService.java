@@ -90,6 +90,7 @@ public class IdNamesSuggestingService {
         return rankedSuggestions.entrySet()
                 .stream()
                 .sorted((e1, e2) -> -Double.compare(e1.getValue(), e2.getValue()))
+                .filter(e -> !isColliding(variable, e.getKey()))
                 .limit(PREDICTION_CUTOFF)
                 .filter(e -> e.getValue() >= 0.001)
                 .collect(Collectors.toMap(
@@ -99,5 +100,18 @@ public class IdNamesSuggestingService {
                             throw new IllegalStateException();
                         },
                         LinkedHashMap::new));
+    }
+
+    /**
+     * Checks if there is variables with newName in the scope.
+     *
+     * @param element element for which we suggest newName.
+     * @param newName new name of the {@param element}.
+     * @return if there are collisions.
+     */
+    private static boolean isColliding(@NotNull PsiElement element, @NotNull String newName) {
+        List<UsageInfo> info = new SmartList<>();
+        JavaUnresolvableLocalCollisionDetector.findCollisions(element, newName, info);
+        return !info.isEmpty();
     }
 }
