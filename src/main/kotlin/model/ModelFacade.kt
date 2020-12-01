@@ -23,7 +23,8 @@ class ModelFacade {
 
     companion object {
         private val log: Logger = Logger.getInstance(ModelFacade::class.java)
-        private val beamSearchModule = org.tensorflow.TensorFlow.loadLibrary(getPathToBeamModule());
+// Throws exception on Windows. Though astrid still doesn't work without it :( TensorFlow can't load the model.
+//        private val beamSearchModule = org.tensorflow.TensorFlow.loadLibrary(getPathToBeamModule());
         private val tfModel: SavedModelBundle = SavedModelBundle.load(getModelPath().toString() + modelSubDir, "serve")
     }
 
