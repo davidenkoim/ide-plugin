@@ -47,7 +47,7 @@ object Downloader {
     }
 
     fun downloadArchive(url: URL, path: Path, indicator: ProgressIndicator) {
-        indicator.text = "astrid: Downloading model..."
+        indicator.text = "astrid: Downloading model for suggesting methods' name..."
         path.toFile().parentFile.mkdirs()
         val urlConnection = url.openConnection()
         val contentLength = urlConnection.contentLength
