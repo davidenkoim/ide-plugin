@@ -8,11 +8,8 @@ import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.refactoring.suggested.createSmartPointer
-import inspections.variable.ProbabilitiesStorage.Companion.recalculateLater
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingService
 import org.jetbrains.id.names.suggesting.ModifiedMemberInplaceRenamer
-import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor.caretInsideVariable
-import org.jetbrains.id.names.suggesting.impl.SuggestVariableNamesIntention
 
 class VariableNamesInspection : AbstractBaseJavaLocalInspectionTool() {
 
@@ -26,15 +23,23 @@ class VariableNamesInspection : AbstractBaseJavaLocalInspectionTool() {
         override fun visitVariable(variable: PsiVariable?) {
             when {
                 variable == null -> return
-                ProbabilitiesStorage.ignore(variable) -> return
-                caretInsideVariable(variable) -> recalculateLater(variable)
+//                ProbabilitiesStorage.isIgnored(variable) -> return
+//                caretInsideVariable(variable) -> recalculateLater(variable)
                 else -> {
-                    if (!ProbabilitiesStorage.contains(variable) || ProbabilitiesStorage.needRecalculate(variable)) {
-                        val prob = IdNamesSuggestingService.getInstance(holder.project).getVariableNameProbability(variable)
-                        ProbabilitiesStorage.put(variable, Probability(prob));
-                    }
-                    val probability = ProbabilitiesStorage.getProbability(variable)
-                    if (probability == null || probability.prob < probabilityCutoff) {
+                    // TODO: It might be removed but i think it would be better to store probabilities for each file and save only last 10 files, for example. For {@link inspections.method.MethodNamesInspection} it might be too slow to evaluate on every method every time.
+//                    if (!ProbabilitiesStorage.contains(variable) || ProbabilitiesStorage.needRecalculate(variable)) {
+//                        val prob = IdNamesSuggestingService.getInstance(holder.project).getVariableNameProbability(variable)
+//                        ProbabilitiesStorage.put(variable, Probability(prob));
+//                    }
+//                    val probability = ProbabilitiesStorage.getProbability(variable)
+//                    if (probability == null || probability.prob < probabilityCutoff) {
+//                        holder.registerProblem(variable.nameIdentifier ?: variable,
+//                                "There are suggestions for variable name",
+//                                ProblemHighlightType.WEAK_WARNING,
+//                                RenameMethodQuickFix(variable.createSmartPointer()))
+//                    }
+                    val probability = IdNamesSuggestingService.getInstance(holder.project).getVariableNameProbability(variable)
+                    if (probability < probabilityCutoff) {
                         holder.registerProblem(variable.nameIdentifier ?: variable,
                                 "There are suggestions for variable name",
                                 ProblemHighlightType.WEAK_WARNING,

@@ -2,7 +2,11 @@ package org.jetbrains.id.names.suggesting;
 
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiVariable;
+import com.intellij.refactoring.rename.JavaUnresolvableLocalCollisionDetector;
+import com.intellij.usageView.UsageInfo;
+import com.intellij.util.SmartList;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
@@ -20,44 +24,43 @@ public class IdNamesSuggestingService {
     }
 
     public LinkedHashMap<String, Double> suggestVariableName(@NotNull PsiVariable variable) {
-        return suggestVariableName(variable, true);
-    }
-
-    public LinkedHashMap<String, Double> suggestVariableName(@NotNull PsiVariable variable,
-                                                             boolean showNotifications) {
         Instant timerStart = Instant.now();
         List<Prediction> nameSuggestions = new ArrayList<>();
-        StringBuilder notifications = new StringBuilder();
-        Instant start = Instant.now();
+        Map<String, Double> stats = new LinkedHashMap<>();
         double p = getVariableNameProbability(variable);
         Instant end = Instant.now();
-        notifications.append(String.format("p=%.3f; t=%.3fms.\n",
-                p,
-                Duration.between(start, end).toNanos() / 1_000_000.));
+        stats.put("p", p);
+        // toNanos because toMillis return long but I want it to be more precise, plus stats already has probability(p) which is anyway Double.
+        stats.put("t (ms)", Duration.between(timerStart, end).toNanos() / 1_000_000.);
         int prioritiesSum = 0;
         for (final VariableNamesContributor modelContributor : VariableNamesContributor.EP_NAME.getExtensions()) {
-            start = Instant.now();
+            Instant start = Instant.now();
             prioritiesSum += modelContributor.contribute(variable, nameSuggestions);
             end = Instant.now();
-            if (showNotifications) {
-                notifications.append(String.format("%s : %.3fms.\n",
-                        modelContributor.getClass().getSimpleName(),
-                        Duration.between(start, end).toNanos() / 1_000_000.));
-            }
+            stats.put(String.format("%s (ms)",
+                    modelContributor.getClass().getSimpleName()),
+                    Duration.between(start, end).toNanos() / 1_000_000.);
         }
-        LinkedHashMap<String, Double> result = rankSuggestions(nameSuggestions, prioritiesSum);
+        LinkedHashMap<String, Double> result = rankSuggestions(variable, nameSuggestions, prioritiesSum);
         Instant timerEnd = Instant.now();
-        if (showNotifications) {
-            notifications.append(String.format("Total time: %.3fms.\n",
-                    Duration.between(timerStart, timerEnd).toNanos() / 1_000_000.));
-            NotificationsUtil.notify(variable.getProject(),
-                    "Time of contribution:",
-                    notifications.toString());
-        }
+        stats.put("Total time (ms)", Duration.between(timerStart, timerEnd).toNanos() / 1_000_000.);
+        notify(variable.getProject(), stats);
         return result;
     }
 
-    public Double getVariableNameProbability(@NotNull PsiVariable variable) {
+    private void notify(Project project, Map<String, Double> stats) {
+        StringBuilder notifications = new StringBuilder();
+        for (Map.Entry<String, Double> kv : stats.entrySet()) {
+            notifications.append(String.format("%s : %.3f;\n",
+                    kv.getKey(),
+                    kv.getValue()));
+        }
+        NotificationsUtil.notify(project,
+                "Id Names Suggesting Stats",
+                notifications.toString());
+    }
+
+    public @NotNull Double getVariableNameProbability(@NotNull PsiVariable variable) {
         double nameProbability = 0.0;
         int prioritiesSum = 0;
         for (final VariableNamesContributor modelContributor : VariableNamesContributor.EP_NAME.getExtensions()) {
@@ -65,10 +68,15 @@ public class IdNamesSuggestingService {
             nameProbability += probPriority.getFirst() * probPriority.getSecond();
             prioritiesSum += probPriority.getSecond();
         }
-        return nameProbability / prioritiesSum;
+        if (prioritiesSum != 0) {
+            return nameProbability / prioritiesSum;
+        } else return 0.0;
     }
 
-    private LinkedHashMap<String, Double> rankSuggestions(List<Prediction> nameSuggestions, int prioritiesSum) {
+    private LinkedHashMap<String, Double> rankSuggestions(PsiElement variable, List<Prediction> nameSuggestions, int prioritiesSum) {
+        if (prioritiesSum == 0) {
+            return new LinkedHashMap<>();
+        }
         Map<String, Double> rankedSuggestions = new HashMap<>();
         for (Prediction prediction : nameSuggestions) {
             Double prob = rankedSuggestions.get(prediction.getName());

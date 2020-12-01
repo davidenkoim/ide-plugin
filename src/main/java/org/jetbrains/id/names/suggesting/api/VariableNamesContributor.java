@@ -15,11 +15,17 @@ public interface VariableNamesContributor {
     /**
      * Contribute some variable names.
      *
-     * @param variable        : variable which name we want to predict.
-     * @param predictionList:
-     * @return priority of contribution
+     * @param variable          variable which name we want to predict.
+     * @param predictionList    container which contains all predictions.
+     * @return                  priority of contribution
      */
     int contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList);
 
+    /**
+     * Get conditional probability of variable name.
+     *
+     * @param variable  some variable.
+     * @return          pair of probability and model priority.
+     */
     Pair<Double, Integer> getProbability(PsiVariable variable);
 }

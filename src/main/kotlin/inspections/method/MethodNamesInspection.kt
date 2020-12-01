@@ -78,7 +78,7 @@ class MethodNamesInspection : AbstractBaseJavaLocalInspectionTool() {
     }
 
     override fun getGroupDisplayName(): String {
-        return "Plugin astrid"
+        return "Plugin Id Names Suggesting"
     }
 
     override fun getShortName(): String {
