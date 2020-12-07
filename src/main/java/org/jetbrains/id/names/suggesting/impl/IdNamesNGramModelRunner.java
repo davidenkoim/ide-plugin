@@ -137,7 +137,6 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                         usagePriority))
                 .sorted((pred1, pred2) -> -Double.compare(pred1.getProbability(), pred2.getProbability()))
                 // Anyway predictions will be filtered later.
-                .limit(IdNamesSuggestingService.PREDICTION_CUTOFF + 10)
                 .collect(Collectors.toList()));
         return usagePriority;
     }

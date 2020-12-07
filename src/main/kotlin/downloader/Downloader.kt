@@ -47,7 +47,7 @@ object Downloader {
     }
 
     fun downloadArchive(url: URL, path: Path, indicator: ProgressIndicator) {
-        indicator.text = "astrid: Downloading model for suggesting methods' name..."
+        indicator.text = "Downloading model for suggesting methods' name..."
         path.toFile().parentFile.mkdirs()
         val urlConnection = url.openConnection()
         val contentLength = urlConnection.contentLength
@@ -84,14 +84,14 @@ object Downloader {
         }
     }
 
-    fun getPathToBeamModule(): String {
+    fun getPathToBeamModule(): String? {
         val os = getOperatingSystemType()
         var path = getModelPath().toString() + modelSubDir
         when {
             os.equals(OSType.MACOS) -> path += beamSubDirMac
             os.equals(OSType.LINUX) -> path += beamSubDirLinux
         }
-        return path
+        return null
     }
 
 }

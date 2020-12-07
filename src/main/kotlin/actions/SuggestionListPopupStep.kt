@@ -5,12 +5,9 @@ import com.intellij.openapi.ui.popup.PopupStep
 import com.intellij.openapi.ui.popup.util.BaseListPopupStep
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiNamedElement
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.refactoring.openapi.impl.RefactoringFactoryImpl
 import inspections.Suggestion
-import inspections.SuggestionsStorage
 import stats.RenameMethodStatistics
 
 class SuggestionListPopupStep(
@@ -27,8 +24,6 @@ class SuggestionListPopupStep(
     private fun doRenameMethodRefactoring(selectedValue: Pair<String, Double>) {
         val elementAt = psiFile.findElementAt(editor.caretModel.offset) ?: return
         if (selectedMethodName.first == "Suppress on this method") {
-            val psiMethod = PsiTreeUtil.getParentOfType(elementAt, PsiMethod::class.java) ?: return
-            SuggestionsStorage.setIgnore(psiMethod)
             RenameMethodStatistics.ignoreCount(aValues.getScores(selectedValue.first))
             return
         }

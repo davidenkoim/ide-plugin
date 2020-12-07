@@ -39,7 +39,7 @@ class SuggestionIntentionAction : IntentionAction {
                 }
 
                 runReadAction {
-                    indicator.text = "Generating suggestions"
+                    indicator.text = "Generating method name suggestions"
                     suggestionsList = ModelFacade().getSuggestions(psiMethod)
                 }
                 if (suggestionsList == null) return
