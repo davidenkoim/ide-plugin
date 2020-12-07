@@ -8,14 +8,14 @@ import com.intellij.openapi.util.registry.Registry;
 
 public class NotificationsUtil {
     /**
-     * Checks if intellij is in the "Developer Mode" and then sends notification.
+     * Checks if intellij is in the "developer.mode" and then sends notification.
      *
      * @param project
      * @param title
      * @param context
      */
     public static void notify(Project project, String title, String context) {
-        if (Registry.get("Developer Mode").asBoolean()) {
+        if (Registry.get("developer.mode").asBoolean()) {
             Notifications.Bus.notify(
                     new Notification(IdNamesSuggestingBundle.message("name"),
                             title,

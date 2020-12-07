@@ -10,11 +10,8 @@ import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
 import downloader.Downloader
 import inspections.Suggestion
-import inspections.SuggestionsStorage
-import inspections.SuggestionsStorage.Companion.recalculateLater
 import model.ModelFacade
 import utils.PsiUtils
-import utils.PsiUtils.caretInsideMethodBlock
 import utils.PsiUtils.hasSuperMethod
 import java.nio.file.Files
 
@@ -32,15 +29,9 @@ class MethodNamesInspection : AbstractBaseJavaLocalInspectionTool() {
                 method.isConstructor -> return
                 hasSuperMethod(method) -> return
                 !Files.exists(Downloader.getModelPath()) -> return
-                SuggestionsStorage.ignore(method) -> return
-                caretInsideMethodBlock(method) -> recalculateLater(method)
                 else -> {
-                    if (!SuggestionsStorage.contains(method) || SuggestionsStorage.needRecalculate(method)) {
-                        val suggestionsList = ModelFacade().getSuggestions(method)
-                        SuggestionsStorage.put(method, suggestionsList)
-                    }
-                    val suggestions = SuggestionsStorage.getSuggestions(method)
-                    if (suggestions != null && suggestions.names.isNotEmpty()
+                    val suggestions = ModelFacade().getSuggestions(method)
+                    if (suggestions.names.isNotEmpty()
                             && !suggestions.containsName(method.name)) {
                         holder.registerProblem(method.nameIdentifier ?: method,
                                 "There are suggestions for method name",
@@ -78,7 +69,7 @@ class MethodNamesInspection : AbstractBaseJavaLocalInspectionTool() {
     }
 
     override fun getGroupDisplayName(): String {
-        return "Plugin Id Names Suggesting"
+        return "Plugin id names suggesting"
     }
 
     override fun getShortName(): String {

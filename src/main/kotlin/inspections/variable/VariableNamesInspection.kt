@@ -21,29 +21,15 @@ class VariableNamesInspection : AbstractBaseJavaLocalInspectionTool() {
         private val probabilityCutoff: Double = 0.001
 
         override fun visitVariable(variable: PsiVariable?) {
-            when {
-                variable == null -> return
-//                ProbabilitiesStorage.isIgnored(variable) -> return
-//                caretInsideVariable(variable) -> recalculateLater(variable)
+            when (variable) {
+                null -> return
                 else -> {
-                    // TODO: It might be removed but i think it would be better to store probabilities for each file and save only last 10 files, for example. For {@link inspections.method.MethodNamesInspection} it might be too slow to evaluate on every method every time.
-//                    if (!ProbabilitiesStorage.contains(variable) || ProbabilitiesStorage.needRecalculate(variable)) {
-//                        val prob = IdNamesSuggestingService.getInstance(holder.project).getVariableNameProbability(variable)
-//                        ProbabilitiesStorage.put(variable, Probability(prob));
-//                    }
-//                    val probability = ProbabilitiesStorage.getProbability(variable)
-//                    if (probability == null || probability.prob < probabilityCutoff) {
-//                        holder.registerProblem(variable.nameIdentifier ?: variable,
-//                                "There are suggestions for variable name",
-//                                ProblemHighlightType.WEAK_WARNING,
-//                                RenameMethodQuickFix(variable.createSmartPointer()))
-//                    }
                     val probability = IdNamesSuggestingService.getInstance(holder.project).getVariableNameProbability(variable)
                     if (probability < probabilityCutoff) {
                         holder.registerProblem(variable.nameIdentifier ?: variable,
-                                "There are suggestions for variable name",
-                                ProblemHighlightType.WEAK_WARNING,
-                                RenameMethodQuickFix(variable.createSmartPointer()))
+                            "There are suggestions for variable name",
+                            ProblemHighlightType.WEAK_WARNING,
+                            RenameMethodQuickFix(variable.createSmartPointer()))
                     }
                     super.visitVariable(variable)
                 }
@@ -71,7 +57,7 @@ class VariableNamesInspection : AbstractBaseJavaLocalInspectionTool() {
     }
 
     override fun getGroupDisplayName(): String {
-        return "Plugin Id Names Suggesting"
+        return "Plugin id names suggesting"
     }
 
     override fun getShortName(): String {
