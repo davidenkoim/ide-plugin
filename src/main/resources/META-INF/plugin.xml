@@ -55,6 +55,10 @@
                 text="Add Project To Global Id Model">
             <add-to-group group-id="AnalyzeMenu" anchor="first"/>
         </action>
+        <action id="build.dataset.from.project" class="org.jetbrains.id.names.suggesting.dataset.DatasetBuildAction"
+                text="Build Dataset From Project">
+            <add-to-group group-id="AnalyzeMenu" anchor="first"/>
+        </action>
     </actions>
     <extensionPoints>
         <extensionPoint qualifiedName="org.jetbrains.id.names.suggesting.variableNamesContributor"
