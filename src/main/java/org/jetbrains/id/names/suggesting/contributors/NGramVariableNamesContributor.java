@@ -75,6 +75,7 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
                 .revPsiTraverser()
                 .withRoot(element.getContainingFile())
                 .onRange(new TextRange(0, max(0, element.getTextOffset())))
+                .forceIgnore(node -> node instanceof PsiComment)
                 .filter(IdNamesNGramModelRunner::shouldLex)) {
             tokens.add(token.getText());
             if (--order < 1) {

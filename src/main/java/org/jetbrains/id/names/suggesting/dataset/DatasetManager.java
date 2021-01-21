@@ -44,13 +44,10 @@ public class DatasetManager {
         final double total = files.size();
         progressIndicator.setIndeterminate(false);
         for (VirtualFile file : files) {
-            dataset.put(file.getPath(), ObjectUtils.doIfNotNull(PsiManager.getInstance(project).findFile(file), DatasetManager::parsePsiFile));
             progressIndicator.setText2(file.getPath());
             progressIndicator.setFraction(++progress / total);
+            dataset.put(file.getPath(), ObjectUtils.doIfNotNull(PsiManager.getInstance(project).findFile(file), DatasetManager::parsePsiFile));
         }
-        progressIndicator.setIndeterminate(true);
-        progressIndicator.setText(IdNamesSuggestingBundle.message("saving.dataset"));
-        progressIndicator.setText2("");
         save(project, dataset);
     }
 
@@ -98,6 +95,7 @@ public class DatasetManager {
                 .revPsiTraverser()
                 .withRoot(element.getContainingFile())
                 .onRange(new TextRange(0, max(0, element.getTextOffset() - 1)))
+                .forceIgnore(node -> node instanceof PsiComment)
                 .filter(IdNamesNGramModelRunner::shouldLex)) {
             if (isVariableOrReference(variable, token)) {
                 tokens.add(VariableToken);

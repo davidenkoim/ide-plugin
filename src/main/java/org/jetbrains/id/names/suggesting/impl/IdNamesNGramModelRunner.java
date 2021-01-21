@@ -166,6 +166,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return SyntaxTraverser.psiTraverser()
                 .withRoot(file)
                 .onRange(new TextRange(0, 64 * 1024)) // first 128 KB of chars
+                .forceIgnore(node -> node instanceof PsiComment)
                 .filter(IdNamesNGramModelRunner::shouldLex)
                 .toList()
                 .stream()
@@ -186,8 +187,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
 
     public static boolean shouldLex(@NotNull PsiElement element) {
         return element.getFirstChild() == null // is leaf
-                && !StringUtils.isBlank(element.getText())
-                && !(element instanceof PsiComment);
+                && !StringUtils.isBlank(element.getText());
     }
 
     private double toProb(@NotNull Pair<Double, Double> probConf) {
