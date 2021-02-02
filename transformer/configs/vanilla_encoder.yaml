@@ -1,0 +1,19 @@
+dataset_path: C:\Users\Igor\IdeaProjects\ide-plugin\build\idea-sandbox\system\dataset\batik_dataset.json
+name_of_run: vanilla-encoder
+max_epochs: 300
+
+max_sequence_length: 6
+max_num_usages: 10
+max_target_length: 6
+embedding_dim: 128
+usage_embedding_dim: 128
+target_embedding_dim: 128
+num_heads: 8
+num_encoder_layers: 2
+num_decoder_layers: 4
+num_usage_layers: 4
+dropout: 0.3
+lr: 1e-4
+batch_size: 32
+sequence_encoder_type: vanilla
+gpus: 1

@@ -12,6 +12,7 @@ import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -49,6 +50,7 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
         return Stream.concat(Stream.of(identifierOwner), elementUsages)
                 .map(NGramVariableNamesContributor::getIdentifier)
                 .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(PsiElement::getTextOffset))
                 .map(this::getNGram)
                 .collect(Collectors.toList());
     }
