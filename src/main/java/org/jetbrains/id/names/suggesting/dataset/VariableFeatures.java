@@ -1,5 +1,7 @@
 package org.jetbrains.id.names.suggesting.dataset;
 
+import com.intellij.psi.PsiVariable;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,13 +12,19 @@ public class VariableFeatures implements Serializable {
     public final String variable;
     public final List<String> ngrams = new ArrayList<>();
     public final List<Object> otherFeatures = new ArrayList<>();
+    public String psiInterface = null;
 
     public VariableFeatures(String variable){
         this.variable = variable;
     }
 
+    public VariableFeatures(PsiVariable variable, List<UsageFeatures> collect) {
+        this(variable.getName(), collect);
+        this.psiInterface = variable.getClass().getInterfaces()[0].getSimpleName();
+    }
+
     public VariableFeatures(String variable, List<UsageFeatures> usages) {
-        this.variable = variable;
+        this(variable);
         for (UsageFeatures usage: usages){
             this.ngrams.add(usage.ngram);
             this.otherFeatures.add(usage.otherFeatures.values());

@@ -37,19 +37,23 @@ public class DatasetManager {
 
     public static void build(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
 //        TODO: Something strange happens with progressIndicator. It might be some leaks from the references' search.
-        progressIndicator.setText2("Collecting project file...");
         Collection<VirtualFile> files = FileTypeIndex.getFiles(JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project));
         HashMap<String, List<VariableFeatures>> dataset = new HashMap<>();
+        HashMap<String, Object> fileStats = new HashMap<>();
         double progress = 0;
         final double total = files.size();
         progressIndicator.setIndeterminate(false);
         for (VirtualFile file : files) {
             progressIndicator.setText2(file.getPath());
             progressIndicator.setFraction(++progress / total);
-            dataset.put(file.getPath(), ObjectUtils.doIfNotNull(PsiManager.getInstance(project).findFile(file), DatasetManager::parsePsiFile));
+            @Nullable PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
+            if(psiFile != null) {
+                dataset.put(file.getPath(), DatasetManager.parsePsiFile(psiFile));
+                fileStats.put(file.getPath(), psiFile.getTextLength());
+            }
         }
-        save(project, dataset);
+        save(project, dataset, fileStats);
     }
 
     private static List<VariableFeatures> parsePsiFile(@NotNull PsiFile file) {
@@ -66,7 +70,7 @@ public class DatasetManager {
 
     private static VariableFeatures getVariableFeatures(PsiVariable variable) {
         Stream<PsiReference> elementUsages = findReferences(variable);
-        return new VariableFeatures(variable.getName(),
+        return new VariableFeatures(variable,
                 Stream.concat(Stream.of(variable), elementUsages)
                         .map(DatasetManager::getIdentifier)
                         .filter(Objects::nonNull)
@@ -134,7 +138,6 @@ public class DatasetManager {
         return ObjectUtils.tryCast(element, PsiIdentifier.class);
     }
 
-
     private static boolean isVariableOrReference(@NotNull PsiVariable variable, @Nullable PsiElement token) {
         if (token instanceof PsiIdentifier) {
             PsiElement parent = token.getParent();
@@ -148,12 +151,21 @@ public class DatasetManager {
     }
 
     private static void save(@NotNull Project project, @NotNull HashMap<String, List<VariableFeatures>> dataset) {
+        save(project, dataset, null);
+    }
+
+    private static void save(@NotNull Project project, @NotNull HashMap<String, List<VariableFeatures>> dataset, @Nullable HashMap<String, Object> fileStats) {
         File datasetFile = DatasetDir.resolve(project.getName() + "_dataset.json").toFile();
+        File statsFile = DatasetDir.resolve(project.getName() + "_stats.json").toFile();
         try {
             datasetFile.getParentFile().mkdir();
             datasetFile.createNewFile();
             ObjectMapper mapper = new ObjectMapper();
             mapper.writeValue(datasetFile, dataset);
+            if(fileStats != null){
+                statsFile.createNewFile();
+                mapper.writeValue(statsFile, fileStats);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

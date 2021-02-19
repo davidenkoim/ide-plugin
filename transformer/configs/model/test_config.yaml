@@ -1,7 +1,8 @@
-dataset_path: C:\Users\Igor\IdeaProjects\ide-plugin\build\idea-sandbox\system\dataset\batik_dataset.json
-name_of_run: test-run
-max_epochs: 100
+# @package _group_
+name_of_run: test_config
 
+use_camel_case_tokenizer: False
+max_epochs: 10
 max_sequence_length: 6
 max_num_usages: 10
 max_target_length: 6
@@ -12,7 +13,7 @@ num_heads: 4
 num_encoder_layers: 2
 num_decoder_layers: 2
 num_usage_layers: 4
-dropout: 0.1
+dropout: 0.3
 lr: 1e-4
 batch_size: 16
 sequence_encoder_type: transformer

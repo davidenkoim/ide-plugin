@@ -4,26 +4,32 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from idTransformerModel import IdTransformerModel
+from transformer.idDataModule import IdDataModule
 
 
-@hydra.main(config_path='configs', config_name='test_config')
+@hydra.main(config_path='configs', config_name='config')
 def train(cfg):
-    model = IdTransformerModel(**cfg)
+    datamodule = IdDataModule(cfg.dataset_path, cfg.model)
+    datamodule.setup('fit')
+    model = IdTransformerModel(datamodule, cfg.model)
+    name_of_run = cfg.model.name_of_run
 
-    wandb_logger = WandbLogger(name=cfg.name_of_run, project='IdTransformer')
-    wandb_logger.log_hyperparams(cfg)
-    wandb_logger.watch(model, log='gradients', log_freq=100)
+    logger = True
+    if cfg.show_in_wandb:
+        logger = WandbLogger(name=name_of_run, project='IdTransformer')
+        logger.log_hyperparams(cfg.model)
+        logger.watch(model, log='all', log_freq=50)
     checkpoint_callback = ModelCheckpoint(save_last=True,
                                           save_top_k=5,
                                           monitor='val_loss',
-                                          dirpath='checkpoints/',
-                                          filename=str(cfg.name_of_run) + '-{epoch:02d}-{val_mrr:.2f}')
-    trainer = pl.Trainer(max_epochs=cfg.max_epochs,
-                         logger=wandb_logger,
-                         gpus=cfg.gpus,
+                                          dirpath=cfg.checkpoints_dir,
+                                          filename=name_of_run + '-{epoch:02d}-{val_mrr:.2f}')
+    trainer = pl.Trainer(max_epochs=cfg.model.max_epochs,
+                         logger=logger,
+                         gpus=cfg.model.gpus,
                          weights_summary='full',
                          callbacks=[checkpoint_callback])
-    trainer.fit(model)
+    trainer.fit(model, datamodule)
 
 
 if __name__ == "__main__":

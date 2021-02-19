@@ -1,7 +1,9 @@
-dataset_path: C:\Users\Igor\IdeaProjects\ide-plugin\build\idea-sandbox\system\dataset\batik_dataset.json
-name_of_run: vanilla-encoder
-max_epochs: 300
+# @package _group_
 
+name_of_run: vanilla_encoder
+
+use_camel_case_tokenizer: False
+max_epochs: 300
 max_sequence_length: 6
 max_num_usages: 10
 max_target_length: 6

@@ -1,0 +1,6 @@
+defaults:
+  - model: transformer_encoder2
+
+dataset_path: C:\Users\Igor\IdeaProjects\ide-plugin\build\idea-sandbox\system\dataset\
+checkpoints_dir: checkpoints/
+show_in_wandb: True
