@@ -4,19 +4,24 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from idTransformerModel import IdTransformerModel
-from transformer.idDataModule import IdDataModule
+from idDataModule import IdDataModule
+import logging
 
 
 @hydra.main(config_path='configs', config_name='config')
 def train(cfg):
-    datamodule = IdDataModule(cfg.dataset_path, cfg.model)
+    datamodule = IdDataModule(cfg.dataset_path, cfg.dataset_split_strategy, cfg.model)
     datamodule.setup('fit')
     model = IdTransformerModel(datamodule, cfg.model)
     name_of_run = cfg.model.name_of_run
 
     logger = True
     if cfg.show_in_wandb:
-        logger = WandbLogger(name=name_of_run, project='IdTransformer')
+        # Turn off wandb warnings.
+        logger = logging.getLogger("wandb")
+        logger.setLevel(logging.WARNING)
+        # Initializing wandb logger.
+        logger = WandbLogger(name=name_of_run, project='IdTransformer', log_model=True)
         logger.log_hyperparams(cfg.model)
         logger.watch(model, log='all', log_freq=50)
     checkpoint_callback = ModelCheckpoint(save_last=True,

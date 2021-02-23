@@ -1,16 +1,24 @@
 import os
+from itertools import chain
 
 import pytorch_lightning as pl
 import torch
 from sklearn.model_selection import train_test_split
 from torchtext import data
+from tqdm.contrib import tmap
 
-from transformer.utils import read_json, camelCaseTokenizer, reverseSplit
+from utils import read_json, camelCaseTokenizer, reverseSplit
 
 
 class IdDataModule(pl.LightningDataModule):
-    def __init__(self, dataset_path, model_cfg):
+    JAVA_SMALL_TRAIN = {"cassandra-dtest-shaded", "gradle", "intellij-community", "presto-root", "wildfly-parent",
+                        "elasticsearch", "hibernate-orm", "liferay-portal", "spring"}
+    JAVA_SMALL_VAL = {"gdx-parent"}
+    JAVA_SMALL_TEST = {"hadoop"}
+
+    def __init__(self, dataset_path, split_strategy, model_cfg):
         super().__init__()
+        self.split_strategy = split_strategy
         self.dataset_path = dataset_path
         self.batch_size = model_cfg.batch_size
 
@@ -46,27 +54,36 @@ class IdDataModule(pl.LightningDataModule):
             test_files, val_files = train_test_split(test_files, train_size=0.5)
         else:
             for file in os.listdir(self.dataset_path):
-                file = os.path.join(self.dataset_path, file)
-                if os.path.isfile(file) & file.endswith('_dataset.json'):
-                    _dataset = read_json(file)
+                file_path = os.path.join(self.dataset_path, file)
+                if os.path.isfile(file_path) & file.endswith("_dataset.json"):
+                    project_name = file.replace("_dataset.json", "")
+                    print(f"Reading dataset {project_name}...")
+                    _dataset = read_json(file_path)
                     dataset.update(_dataset)
-                    if len(_dataset) >= 10:
-                        _train_files, _test_files = train_test_split(list(_dataset.keys()), train_size=0.8)
-                        _test_files, _val_files = train_test_split(_test_files, train_size=0.5)
-                        train_files.extend(_train_files)
-                        val_files.extend(_val_files)
-                        test_files.extend(_test_files)
+                    if self.split_strategy == "mixed":
+                        if len(_dataset) >= 10:
+                            _train_files, _test_files = train_test_split(list(_dataset.keys()), train_size=0.8)
+                            _test_files, _val_files = train_test_split(_test_files, train_size=0.5)
+                            train_files.extend(_train_files)
+                            val_files.extend(_val_files)
+                            test_files.extend(_test_files)
+                        else:
+                            test_files.extend(list(_dataset.keys()))
+                    elif self.split_strategy == "java-small":
+                        if project_name in self.JAVA_SMALL_TRAIN:
+                            print("Sending to train...")
+                            train_files.extend(_dataset.keys())
+                        elif project_name in self.JAVA_SMALL_VAL:
+                            print("Sending to val...")
+                            val_files.extend(_dataset.keys())
+                        elif project_name in self.JAVA_SMALL_TEST:
+                            print("Sending to test...")
+                            test_files.extend(_dataset.keys())
+                        else:
+                            print(f"Project {project_name} is not in java-small dataset.")
                     else:
-                        test_files.extend(list(_dataset.keys()))
+                        raise NotImplementedError()
 
-        def make_dataset(files, dset):
-            return sum([dset[file] for file in files], [])
-
-        train = make_dataset(train_files, dataset)
-        test = make_dataset(test_files, dataset)
-        val = make_dataset(val_files, dataset)
-
-        # Configuring torchtext fields for automatic padding and numericalization of batches
         self.target_field = data.Field(sequential=True,
                                        use_vocab=True,
                                        init_token=self.init_token,
@@ -77,6 +94,8 @@ class IdDataModule(pl.LightningDataModule):
                                        batch_first=True,
                                        is_target=True,
                                        include_lengths=True)
+
+        # Configuring torchtext fields for automatic padding and numericalization of batches
         self.usages_field = data.NestedField(data.Field(sequential=True,
                                                         use_vocab=True,
                                                         init_token=None,
@@ -88,24 +107,38 @@ class IdDataModule(pl.LightningDataModule):
                                                         is_target=False),
                                              fix_length=self.max_num_usages,
                                              include_lengths=True)
-        example_fields = {'variable': ('target', self.target_field),
-                          'ngrams': ('usages', self.usages_field)}
-        dataset_fields = {'target': self.target_field,
-                          'usages': self.usages_field}
 
-        self.train_dataset = data.Dataset(list(map(lambda d: data.Example.fromdict(d, example_fields), train)),
-                                          dataset_fields)
-        self.target_field.build_vocab(self.train_dataset)
+        print("Building train dataset...")
+        self.train_dataset = self.make_dataset(train_files, dataset)
+        print("Building usage vocab...")
         self.usages_field.build_vocab(self.train_dataset)
-        self.test_dataset = data.Dataset(list(map(lambda d: data.Example.fromdict(d, example_fields), test)),
-                                         dataset_fields)
-        self.val_dataset = data.Dataset(list(map(lambda d: data.Example.fromdict(d, example_fields), val)),
-                                        dataset_fields)
+        print("Building target vocab...")
+        self.target_field.build_vocab(self.train_dataset)
+        print("Building val dataset...")
+        self.val_dataset = self.make_dataset(val_files, dataset)
+        print("Building test dataset...")
+        self.test_dataset = self.make_dataset(test_files, dataset)
 
         self.usage_vocab_size = len(self.usages_field.vocab.itos)
         self.usage_pad_idx = self.usages_field.vocab.stoi['<pad>']
         self.target_vocab_size = len(self.target_field.vocab.itos)
         self.target_pad_idx = self.target_field.vocab.stoi['<pad>']
+
+    def make_dataset(self, files, dset):
+        example_fields = {'variable': ('target', self.target_field),
+                          'ngrams': ('usages', self.usages_field)}
+        dataset_fields = {'target': self.target_field,
+                          'usages': self.usages_field}
+        dataset = data.Dataset(
+            list(tmap(
+                lambda d: data.Example.fromdict(d, example_fields),
+                chain(*map(lambda file: dset[file], files)),
+                mininterval=0.5
+            )),
+            dataset_fields)
+        for file in files:
+            del dset[file]
+        return dataset
 
     def train_dataloader(self):
         return data.BucketIterator(self.train_dataset, self.batch_size)
