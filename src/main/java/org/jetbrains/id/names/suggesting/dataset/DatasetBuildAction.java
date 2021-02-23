@@ -20,9 +20,9 @@ import java.time.Instant;
 public class DatasetBuildAction extends AnAction {
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        if (e.getProject() != null &&
-                FileTypeIndex.containsFileOfType(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(e.getProject()))) {
-            Project project = e.getProject();
+        Project project = e.getProject();
+        if (project != null &&
+                FileTypeIndex.containsFileOfType(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project))) {
             ProgressManager.getInstance().run(new Task.Backgroundable(project, IdNamesSuggestingBundle.message("building.dataset.title")) {
                 @Override
                 public void run(@NotNull ProgressIndicator progressIndicator) {

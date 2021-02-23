@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,7 +37,11 @@ public class DatasetManager {
     public static String VariableToken = "<var>";
     private static final Path DatasetDir = Paths.get(PathManager.getSystemPath(), "dataset");
 
-    public static void build(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
+    public static void build(@NotNull Project project) {
+        build(project, null);
+    }
+
+    public static void build(@NotNull Project project, @Nullable ProgressIndicator progressIndicator) {
 //        TODO: Something strange happens with progressIndicator. It might be some leaks from the references' search.
         Collection<VirtualFile> files = FileTypeIndex.getFiles(JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project));
@@ -43,17 +49,33 @@ public class DatasetManager {
         HashMap<String, Object> fileStats = new HashMap<>();
         double progress = 0;
         final double total = files.size();
-        progressIndicator.setIndeterminate(false);
+        Instant start = Instant.now();
+        @NotNull PsiManager psiManager = PsiManager.getInstance(project);
+        System.out.printf("Number of files to parse: %s\n", files.size());
         for (VirtualFile file : files) {
-            progressIndicator.setText2(file.getPath());
-            progressIndicator.setFraction(++progress / total);
-            @Nullable PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
-            if(psiFile != null) {
-                dataset.put(file.getPath(), DatasetManager.parsePsiFile(psiFile));
-                fileStats.put(file.getPath(), psiFile.getTextLength());
+            @Nullable PsiFile psiFile = psiManager.findFile(file);
+            if (psiFile != null) {
+                @NotNull String filePath = file.getPath();
+                dataset.put(filePath, DatasetManager.parsePsiFile(psiFile));
+                fileStats.put(filePath, psiFile.getTextLength());
+                double timeLeft = Duration.between(start, Instant.now()).toMillis() * (total / ++progress - 1) / 1000.;
+                if (progressIndicator != null) {
+                    progressIndicator.setIndeterminate(false);
+                    progressIndicator.setText2(file.getPath());
+                    progressIndicator.setFraction(progress / total);
+                }
+                System.out.printf("Status:\t%.2f%%; Time left:\t%.1f s.\r", progress / total * 100., timeLeft);
+            } else {
+                System.out.println("PSI isn't found");
             }
         }
         save(project, dataset, fileStats);
+        Instant end = Instant.now();
+        Duration timeSpent = Duration.between(start, end);
+        long minutes = timeSpent.toMinutes();
+        int seconds = (int) (timeSpent.toMillis() / 1000. - 60. * minutes);
+        System.out.printf("Done in %d min. %d s.\n",
+                minutes, seconds);
     }
 
     private static List<VariableFeatures> parsePsiFile(@NotNull PsiFile file) {
@@ -64,23 +86,22 @@ public class DatasetManager {
                 .toList()
                 .stream()
                 .map(e -> (PsiVariable) e)
-                .map(DatasetManager::getVariableFeatures)
+                .map(v -> getVariableFeatures(v, file))
                 .collect(Collectors.toList());
     }
 
-    private static VariableFeatures getVariableFeatures(PsiVariable variable) {
-        Stream<PsiReference> elementUsages = findReferences(variable);
+    private static VariableFeatures getVariableFeatures(PsiVariable variable, PsiFile file) {
+        Stream<PsiReference> elementUsages = findReferences(variable, file);
         return new VariableFeatures(variable,
                 Stream.concat(Stream.of(variable), elementUsages)
                         .map(DatasetManager::getIdentifier)
                         .filter(Objects::nonNull)
                         .sorted(Comparator.comparing(PsiElement::getTextOffset))
-                        .map(id -> getUsageFeatures(variable, id))
+                        .map(id -> getUsageFeatures(variable, id, file))
                         .collect(Collectors.toList()));
     }
 
-    private static UsageFeatures getUsageFeatures(@NotNull PsiVariable variable, @NotNull PsiElement element) {
-        PsiFile file = element.getContainingFile();
+    private static UsageFeatures getUsageFeatures(@NotNull PsiVariable variable, @NotNull PsiElement element, @NotNull PsiFile file) {
         List<String> tokens = new ArrayList<>();
 //        Adding tokens before usage
         int order = NGramLengthBeforeUsage;
@@ -123,8 +144,9 @@ public class DatasetManager {
         );
     }
 
-    public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner) {
-        return ReferencesSearch.search(identifierOwner)
+    public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner, @NotNull PsiFile file) {
+//        Unknown problems when using GlobalSearchScope.projectScope. Most likely there are too many fields and searching breaks.
+        return ReferencesSearch.search(identifierOwner, GlobalSearchScope.fileScope(file))
                 .findAll()
                 .stream();
     }
@@ -162,7 +184,7 @@ public class DatasetManager {
             datasetFile.createNewFile();
             ObjectMapper mapper = new ObjectMapper();
             mapper.writeValue(datasetFile, dataset);
-            if(fileStats != null){
+            if (fileStats != null) {
                 statsFile.createNewFile();
                 mapper.writeValue(statsFile, fileStats);
             }
