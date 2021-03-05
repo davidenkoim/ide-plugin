@@ -1,7 +1,5 @@
 defaults:
-  - model: transformer_encoder2
+  - model: test_model
+  - dataset: java-small
 
-dataset_path: C:\Users\Igor\IdeaProjects\ide-plugin\build\idea-sandbox\system\dataset\java-small\
-dataset_split_strategy: java-small # or mixed
-checkpoints_dir: checkpoints/
-show_in_wandb: True
+show_in_wandb: False

@@ -1,8 +1,10 @@
 # @package _group_
 
 name_of_run: vanilla_encoder
+checkpoints_dir: checkpoints/
 
-use_camel_case_tokenizer: False
+usage_tokenizer_type: split
+target_tokenizer_type:
 max_epochs: 300
 max_sequence_length: 6
 max_num_usages: 10
