@@ -129,15 +129,15 @@ tasks {
 //        jvmArgs = listOf("-Xmx8G")
 //    }
 
-//    PSIMiner part
+//    varMiner part
     runIde {
         val dataset: String? by project
-        args = listOfNotNull("psiMiner", dataset)
+        args = listOfNotNull("varMiner", dataset)
         jvmArgs = listOf("-Djava.awt.headless=true")
         maxHeapSize = "8g"
     }
 
-    register("runPSIMiner") {
+    register("runVarMiner") {
         dependsOn(runIde)
     }
 

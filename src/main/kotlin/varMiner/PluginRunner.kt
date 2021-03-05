@@ -1,20 +1,15 @@
-package dataMiner
+package varMiner
 
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationStarter
-import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
-import org.jetbrains.id.names.suggesting.NotificationsUtil
 import org.jetbrains.id.names.suggesting.dataset.DatasetManager
 import java.io.File
-import java.time.Duration
-import java.time.Instant
 import kotlin.system.exitProcess
 
 class PluginRunner : ApplicationStarter {
 
-    override fun getCommandName(): String = "psiMiner"
+    override fun getCommandName(): String = "varMiner"
 
     override fun main(args: Array<out String>) {
         try {
