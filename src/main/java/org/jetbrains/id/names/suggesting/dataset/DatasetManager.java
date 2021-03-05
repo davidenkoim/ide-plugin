@@ -32,6 +32,7 @@ import static java.lang.Integer.min;
 import static java.lang.Math.abs;
 
 public class DatasetManager {
+    private static final String TOKEN_DELIMITER = "\u2581";
     public static int NGramLengthBeforeUsage = 6;
     public static int NGramLengthAfterUsage = 6;
     public static String VariableToken = "<var>";
@@ -42,7 +43,6 @@ public class DatasetManager {
     }
 
     public static void build(@NotNull Project project, @Nullable ProgressIndicator progressIndicator) {
-//        TODO: Something strange happens with progressIndicator. It might be some leaks from the references' search.
         Collection<VirtualFile> files = FileTypeIndex.getFiles(JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project));
         HashMap<String, List<VariableFeatures>> dataset = new HashMap<>();
@@ -139,7 +139,7 @@ public class DatasetManager {
             }
         }
         return new UsageFeatures(
-                String.join(" ", tokens),
+                String.join(DatasetManager.TOKEN_DELIMITER, tokens),
                 abs(variable.getTextOffset() - element.getTextOffset())
         );
     }
