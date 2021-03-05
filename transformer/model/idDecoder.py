@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torch.nn import TransformerDecoderLayer, TransformerDecoder
 
-from positionalEncoder import PositionalEncoding
+from model.positionalEncoder import PositionalEncoding
 from utils import generate_padding_mask, generate_attention_mask
 
 
@@ -47,19 +47,20 @@ class IdDecoder(nn.Module):
         :param tgt_length: B
         :return: BxTxV
         """
-        t = self.get_embeddings(tgt)  # BxT -> TxBxE
+        t = tgt.transpose(0, 1)  # BxT -> TxB
+        t = self.get_embeddings(t)  # TxB -> TxBxE
         t = self.decode(memory, t, num_memories, tgt_length)  # TxBxE -> TxBxH
         t = self.fc(t)  # TxBxH -> TxBxV
         return t.transpose(1, 0)  # TxBxV -> BxTxV
 
     def get_embeddings(self, tgt):
         """
-        :param tgt: BxT
+        :param tgt: TxB
         :return: TxBxE
         """
-        t = self.embedding(tgt)  # BxT -> BxTxE
+        t = self.embedding(tgt)  # TxB -> TxBxE
         t = self.positional_encoder(t)
-        return t.transpose(1, 0)  # BxTxE -> TxBxE
+        return t  # TxBxE
 
     def decode(self, memory, tgt, num_memories=None, tgt_length=None):
         """

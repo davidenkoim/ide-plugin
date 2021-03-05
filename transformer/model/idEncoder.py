@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
-from positionalEncoder import PositionalEncoding
+from model.positionalEncoder import PositionalEncoding
 from utils import generate_padding_mask
 
 
@@ -64,8 +64,9 @@ class IdEncoder(nn.Module):
         :param num_usages: B
         :return: UxBxH -- memory that will be fed to decoder
         """
-        t = self.sequence_encoder(x)  # BxUxL -> BxUxH
-        t = self.usage_encoder(t, num_usages)  # BxUxH -> UxBxH
+        t = x.transpose(0, 1).contiguous()  # BxUxL -> UxBxL
+        t = self.sequence_encoder.forward(t)  # UxBxL -> UxBxE
+        t = self.usage_encoder.forward(t, num_usages)  # UxBxE -> UxBxH
         return t  # UxBxH memory that will be fed to decoder
 
 
@@ -99,23 +100,23 @@ class SequenceEncoder(nn.Module):
         self.encoder = TransformerEncoder(encoder_layer, num_layers)
         self.fc = nn.Linear(hidden_dim * max_sequence_length, hidden_dim)
 
-    def forward(self, x):  # BxUxL
+    def forward(self, x):  # UxBxL
         """
-        :param x: BxUxL
-        :return: BxUxH
+        :param x: UxBxL
+        :return: UxBxH
         """
-        b, u, l = x.shape
-        e = self.embedding.embedding_dim
-        t = x.contiguous().view(b * u, l)  # BxUxL -> BUxL
+        u, b, l = x.shape
+        t = x.view(u * b, l)  # UxBxL -> UBxL
         mask = t == self.pad_idx  # Do not want attention to learn on padding usages
         mask[:, 0] = False  # To handle nans
-        t = t.permute(1, 0)  # BUxL -> LxBU
-        t = self.embedding(t)  # LxBU -> LxBUxE
+        t = t.transpose(0, 1)  # UBxL -> LxUB
+        t = self.embedding(t)  # LxUB -> LxUBxE
         t = self.positional_encoder(t)
-        t = self.encoder(t, src_key_padding_mask=mask)  # LxBUxE -> LxBUxH unconditioned sequence
-        t = t.transpose(0, 1).contiguous().view(b * u, -1)  # LxBUxH -> BUxLH
-        t = self.fc(t)  # BUxLH -> BUxH
-        return t.view(b, u, -1)  # BUxH -> BxUxH
+        t = self.encoder(t, src_key_padding_mask=mask)  # LxUBxE -> LxUBxH unconditioned sequence
+        h = t.shape[-1]
+        t = t.transpose(0, 1).contiguous().view(u * b, l * h)  # LxUBxH -> UBxLH
+        t = self.fc(t)  # UBxLH -> UBxH
+        return t.view(u, b, h)  # UBxH -> UxBxH
 
 
 class VanillaSequenceEncoder(nn.Module):
@@ -124,13 +125,13 @@ class VanillaSequenceEncoder(nn.Module):
         self.pad_idx = pad_idx
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=pad_idx)
 
-    def forward(self, x):  # BxUxL
+    def forward(self, x):  # UxBxL
         """
-        :param x: BxUxL
-        :return: BxUxE
+        :param x: UxBxL
+        :return: UxBxE
         """
-        t = self.embedding(x)  # BxUxL -> BxUxLxE
-        return t.mean(dim=2)  # BxUxLxE -> BxUxE
+        t = self.embedding(x)  # UxBxL -> UxBxLxE
+        return t.mean(dim=2)  # UxBxLxE -> UxBxE
 
 
 class UsageEncoder(nn.Module):
@@ -158,14 +159,12 @@ class UsageEncoder(nn.Module):
 
     def forward(self, x, num_usages=None):
         """
-        :param x: BxUxE,
+        :param x: UxBxE,
         :param num_usages: B
         :return: UxBxH - unconditioned sequence of usage embeddings
         """
-        t = x.contiguous().transpose(1, 0)  # BxUxE -> UxBxE
-        t = self.positional_encoder(t)
+        t = self.positional_encoder(x)  # UxBxE -> UxBxE
         # Do not want padding usages to participate in attention
         padding_mask = generate_padding_mask(num_usages, self.max_num_usages, device=t.device)
-        t = self.encoder(t, src_key_padding_mask=padding_mask)  # UxBxE -> UxBxH
-        # Unconditioned sequence of usage embeddings
+        t = self.encoder.forward(t, src_key_padding_mask=padding_mask)  # UxBxE -> UxBxH
         return t  # UxBxH
