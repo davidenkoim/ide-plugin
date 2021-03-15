@@ -18,9 +18,9 @@ class LazyIdDataset(BaseIdDataset):
         test_path = join(self.dataset_path, self.test_path)
 
         example_fields = {'variable': ('target', self.target_field),
-                          'ngrams': ('usages', self.usages_field)}
+                          'ngrams': ('usages', self.usage_field)}
         dataset_fields = {'target': self.target_field,
-                          'usages': self.usages_field}
+                          'usages': self.usage_field}
 
         reader_cls = LazyReader if self.lazy_reader_type == "with_cache" else LazyByteReader
         print("Building train dataset...")

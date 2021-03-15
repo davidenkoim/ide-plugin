@@ -62,9 +62,9 @@ class JSONIdDataset(BaseIdDataset):
 
     def make_dataset(self, files, dset):
         example_fields = {'variable': ('target', self.target_field),
-                          'ngrams': ('usages', self.usages_field)}
+                          'ngrams': ('usages', self.usage_field)}
         dataset_fields = {'target': self.target_field,
-                          'usages': self.usages_field}
+                          'usages': self.usage_field}
         dataset = data.Dataset(
             list(tmap(
                 lambda d: data.Example.fromdict(d, example_fields),
