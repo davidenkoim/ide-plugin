@@ -17,6 +17,8 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
     <extensions defaultExtensionNs="com.intellij">
+        <registryKey key="developer.mode" description="Registry for showing id names suggesting plugin notifications"
+                     defaultValue="True" restartRequired="false"/>
         <!-- varMiner part-->
         <appStarter implementation="varMiner.PluginRunner"/>
         <!-- End of varMiner part-->
@@ -27,6 +29,7 @@
         <projectService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingService"/>
         <backgroundPostStartupActivity
                 implementation="org.jetbrains.id.names.suggesting.LoadingGlobalModelStartupActivity"/>
+        <inspectionToolProvider implementation="inspections.variable.VariableNamesProvider"/>
         <!-- Astrid part-->
         <intentionAction>
             <className>actions.SuggestionIntentionAction</className>
@@ -34,7 +37,7 @@
             <descriptionDirectoryName>SuggestionIntentionAction</descriptionDirectoryName>
         </intentionAction>
 
-        <inspectionToolProvider implementation="inspections.MethodNamesProvider"/>
+        <inspectionToolProvider implementation="inspections.method.MethodNamesProvider"/>
         <inspectionToolProvider implementation="inspections.ifstatement.IfStatementProvider"/>
 
         <applicationService serviceImplementation="stats.RenameMethodStatistics"/>

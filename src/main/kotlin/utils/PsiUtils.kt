@@ -1,15 +1,13 @@
 package utils
 
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiModifier
-import com.intellij.psi.PsiModifierList
-import com.intellij.psi.PsiType
-import com.intellij.openapi.actionSystem.DataConstants
-import com.intellij.ide.DataManager
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.project.Project
+import com.intellij.psi.*
+import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor
+import java.util.concurrent.atomic.AtomicReference
 
 object PsiUtils {
     /**
@@ -46,9 +44,30 @@ object PsiUtils {
 
     fun caretInsideMethodBlock(method: PsiMethod): Boolean {
         val methodTextRange = method.textRange
-        val editor = DataManager.getInstance().dataContext.getData(DataConstants.EDITOR) as Editor? ?: return true
-        val caret = editor.caretModel.primaryCaret.offset
-        return (caret > methodTextRange.startOffset) && (caret < methodTextRange.endOffset)
+        val offset = getOffset(method)
+        return if (offset != null) {
+            (offset > methodTextRange.startOffset) && (offset < methodTextRange.endOffset)
+        } else {
+            false
+        }
+    }
+
+    fun caretInsideVariable(variable: PsiVariable): Boolean {
+        val offset = getOffset(variable)
+        return if (offset != null) {
+            NGramVariableNamesContributor.findReferences(variable).anyMatch { reference: PsiReference ->
+                offset >= reference.rangeInElement.startOffset &&
+                        offset <= reference.rangeInElement.endOffset
+            }
+        } else {
+            false
+        }
+    }
+
+    private fun getOffset(element: PsiElement): Int? {
+        val editor = AtomicReference<Editor?>(null)
+        ReadAction.nonBlocking { editor.set(FileEditorManager.getInstance(element.project).selectedTextEditor) }
+        return editor.get()?.caretModel?.offset
     }
 
     fun hasSuperMethod(method: PsiMethod): Boolean {

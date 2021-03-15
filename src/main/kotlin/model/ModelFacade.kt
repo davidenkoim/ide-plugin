@@ -4,7 +4,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.psi.PsiMethod
 import downloader.Downloader.dictSubDir
 import downloader.Downloader.getModelPath
-import downloader.Downloader.getPathToBeamModule
 import downloader.Downloader.modelSubDir
 import org.tensorflow.SavedModelBundle
 import org.tensorflow.Session
@@ -23,7 +22,8 @@ class ModelFacade {
 
     companion object {
         private val log: Logger = Logger.getInstance(ModelFacade::class.java)
-        private val beamSearchModule = org.tensorflow.TensorFlow.loadLibrary(getPathToBeamModule());
+        private val beamSearchModule = PredictionModel.buildModel()
+//        SavedModelBundle.load doesn't work on windows.
         private val tfModel: SavedModelBundle = SavedModelBundle.load(getModelPath().toString() + modelSubDir, "serve")
     }
 
@@ -34,24 +34,6 @@ class ModelFacade {
 
     fun getSuggestions(methodBody: String): Suggestion {
         return Suggestion(generatePredictions(methodBody))
-    }
-
-    private fun parseResults(listOfIndexes: List<List<Any>>): List<String> {
-        var predictions = ArrayList<String>()
-        val stream = FileInputStream(getModelPath().toString() + dictSubDir)
-        val unpickler = Unpickler()
-        val dictionary = unpickler.load(stream)
-        val mapOfSubtokens = dictionary as HashMap<Int, String>
-        for (indexes in listOfIndexes) {
-            var name = mapOfSubtokens.get(indexes[0]) ?: ""
-            for (i in indexes.subList(1, indexes.size)) {
-                var subtoken: String? = mapOfSubtokens.get(i)
-                if (subtoken != null && !subtoken.equals("<PAD>") && !subtoken.equals("<UNK>"))
-                    name += subtoken.substring(0, 1).toUpperCase() + subtoken.substring(1)
-            }
-            predictions.add(name)
-        }
-        return predictions
     }
 
     private fun generatePredictions(methodBody: String): ArrayList<Pair<String, Double>> {
@@ -85,5 +67,23 @@ class ModelFacade {
         }
 
         return resultPairs
+    }
+
+    private fun parseResults(listOfIndexes: List<List<Any>>): List<String> {
+        var predictions = ArrayList<String>()
+        val stream = FileInputStream(getModelPath().toString() + dictSubDir)
+        val unpickler = Unpickler()
+        val dictionary = unpickler.load(stream)
+        val mapOfSubtokens = dictionary as HashMap<Int, String>
+        for (indexes in listOfIndexes) {
+            var name = mapOfSubtokens.get(indexes[0]) ?: ""
+            for (i in indexes.subList(1, indexes.size)) {
+                var subtoken: String? = mapOfSubtokens.get(i)
+                if (subtoken != null && !subtoken.equals("<PAD>") && !subtoken.equals("<UNK>"))
+                    name += subtoken.substring(0, 1).toUpperCase() + subtoken.substring(1)
+            }
+            predictions.add(name)
+        }
+        return predictions
     }
 }

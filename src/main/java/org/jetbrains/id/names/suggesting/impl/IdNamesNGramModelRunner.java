@@ -57,17 +57,48 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return this.myVocabulary.size();
     }
 
+    /**
+     * Makes predictions for the last token from a set of N-gram sequences.
+     *
+     * @param identifierClass class of identifier (to check if we support suggesting for it).
+     * @param usageNGrams     n-grams from which model should get suggestions.
+     * @return List of predictions.
+     */
     @Override
     public List<Prediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
         allUsageNGramIndices.forEach(this::forgetUsage);
         List<Prediction> predictionList = new ArrayList<>();
         int usagePrioritiesSum = 0;
-        for (List<Integer> usageNGramIndices: allUsageNGramIndices){
+        for (List<Integer> usageNGramIndices : allUsageNGramIndices) {
             usagePrioritiesSum += predictUsageName(predictionList, usageNGramIndices, getIdTypeFilter(identifierClass));
         }
         allUsageNGramIndices.forEach(this::learnUsage);
         return rankUsagePredictions(predictionList, usagePrioritiesSum);
+    }
+
+    /**
+     * Gets a conditional probability of the last token(in each n-gram sequence they are the same)
+     * using the formula of total probability. So the final probability obtained as a weighted sum
+     * of conditional probabilities(see {@link IdNamesNGramModelRunner#getUsageProbability}) for each n-gram sequence
+     * with weights equal to the usagePriority (see {@link IdNamesNGramModelRunner#getUsagePriority}) of each sequence.
+     *
+     * @param usageNGrams n-grams from which model should get probability of the last token.
+     * @return pair of probability and model priority.
+     */
+    @Override
+    public Pair<Double, Integer> getProbability(List<List<String>> usageNGrams) {
+        List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
+        allUsageNGramIndices.forEach(this::forgetUsage);
+        double probability = 0.0;
+        int usagePrioritiesSum = 0;
+        for (List<Integer> usageNGramIndices : allUsageNGramIndices) {
+            Pair<Double, Integer> probPriority = getUsageProbability(usageNGramIndices);
+            probability += probPriority.getFirst() * probPriority.getSecond();
+            usagePrioritiesSum += probPriority.getSecond();
+        }
+        allUsageNGramIndices.forEach(this::learnUsage);
+        return new Pair<>(probability / usagePrioritiesSum, getModelPriority());
     }
 
     private List<Prediction> rankUsagePredictions(List<Prediction> predictionList, int usagePrioritiesSum) {
@@ -105,15 +136,42 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                         toProb(e.getValue()),
                         usagePriority))
                 .sorted((pred1, pred2) -> -Double.compare(pred1.getProbability(), pred2.getProbability()))
-                .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
+                // Anyway predictions will be filtered later.
                 .collect(Collectors.toList()));
         return usagePriority;
     }
 
+    /**
+     * Gets probability of identifier usage.
+     *
+     * @param usageNGramIndices n-gram sequence.
+     * @return pair of probability and usagePriority.
+     */
+    private Pair<Double, Integer> getUsageProbability(List<Integer> usageNGramIndices) {
+        int usagePriority = getUsagePriority(usageNGramIndices);
+        double probability = toProb(myModel.modelAtIndex(usageNGramIndices, usageNGramIndices.size() - 1));
+        return new Pair<>(probability, usagePriority);
+    }
+
+    /**
+     * Gets estimation of context usage count according to {@link IdNamesNGramModelRunner#myModel}.
+     * It is estimated as a weighted sum of context counts of different size.
+     *
+     * Detailed explanation.
+     * Consider context sequence {C_i, ..., C_k} as C(i,k) and order of n-gram as N.
+     * Then final estimation of context usage count will be: sum from i=0 to N-1 of 1/2^i * count(C(i, N-1)).
+     * It is very similar to Jelinek-Mercer smoothing, which is used in {@link com.intellij.completion.ngram.slp.modeling.ngram.JMModel}.
+     *
+     * May be it is better to assign it to 1 for all sequences,
+     * but imho we have to evaluate some metrics to make that decision.
+     *
+     * @param usageNGramIndices n-gram sequence, count of which we want to derive.
+     * @return usage priority.
+     */
     private int getUsagePriority(List<Integer> usageNGramIndices) {
         long priority = 0;
         long contextCount = 1;
-        for (int index = usageNGramIndices.size() - 2; index >= 0; index--){
+        for (int index = usageNGramIndices.size() - 2; index >= 0; index--) {
             if (contextCount > 0) {
                 long[] counts = myModel.getCounter().getCounts(usageNGramIndices.subList(index, usageNGramIndices.size()));
                 contextCount = counts[1];

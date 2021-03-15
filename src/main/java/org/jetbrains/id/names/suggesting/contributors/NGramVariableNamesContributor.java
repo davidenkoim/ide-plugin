@@ -5,6 +5,7 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.util.ObjectUtils;
+import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.id.names.suggesting.Prediction;
@@ -30,13 +31,24 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
     private int modelOrder;
 
     @Override
-    public void contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList) {
+    public int contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList) {
         IdNamesNGramModelRunner modelRunner = getModelRunnerToContribute(variable);
         if (modelRunner == null || !isSupported(variable)) {
-            return;
+            return 0;
         }
         modelOrder = modelRunner.getOrder();
         predictionList.addAll(modelRunner.suggestNames(variable.getClass(), findUsageNGrams(variable)));
+        return modelRunner.getModelPriority();
+    }
+
+    @Override
+    public Pair<Double, Integer> getProbability(PsiVariable variable) {
+        IdNamesNGramModelRunner modelRunner = getModelRunnerToContribute(variable);
+        if (modelRunner == null || !isSupported(variable)) {
+            return new Pair<>(0.0, 0);
+        }
+        modelOrder = modelRunner.getOrder();
+        return modelRunner.getProbability(findUsageNGrams(variable));
     }
 
     public abstract @Nullable IdNamesNGramModelRunner getModelRunnerToContribute(@NotNull PsiVariable variable);

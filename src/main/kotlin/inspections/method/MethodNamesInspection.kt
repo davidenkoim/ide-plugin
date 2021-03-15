@@ -1,22 +1,17 @@
-package inspections
+package inspections.method
 
 import actions.SuggestionListPopupStep
-import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool
-import com.intellij.codeInspection.LocalQuickFix
-import com.intellij.codeInspection.ProblemDescriptor
-import com.intellij.codeInspection.ProblemHighlightType
-import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.codeInspection.*
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import downloader.Downloader
-import inspections.SuggestionsStorage.Companion.recalculateLater
+import inspections.Suggestion
 import model.ModelFacade
 import utils.PsiUtils
-import utils.PsiUtils.caretInsideMethodBlock
 import utils.PsiUtils.hasSuperMethod
 import java.nio.file.Files
 
@@ -34,15 +29,9 @@ class MethodNamesInspection : AbstractBaseJavaLocalInspectionTool() {
                 method.isConstructor -> return
                 hasSuperMethod(method) -> return
                 !Files.exists(Downloader.getModelPath()) -> return
-                SuggestionsStorage.ignore(method) -> return
-                caretInsideMethodBlock(method) -> recalculateLater(method)
                 else -> {
-                    if (!SuggestionsStorage.contains(method) || SuggestionsStorage.needRecalculate(method)) {
-                        val suggestionsList = ModelFacade().getSuggestions(method)
-                        SuggestionsStorage.put(method, suggestionsList)
-                    }
-                    val suggestions = SuggestionsStorage.getSuggestions(method)
-                    if (suggestions != null && suggestions.names.isNotEmpty()
+                    val suggestions = ModelFacade().getSuggestions(method)
+                    if (suggestions.names.isNotEmpty()
                             && !suggestions.containsName(method.name)) {
                         holder.registerProblem(method.nameIdentifier ?: method,
                                 "There are suggestions for method name",
@@ -80,7 +69,7 @@ class MethodNamesInspection : AbstractBaseJavaLocalInspectionTool() {
     }
 
     override fun getGroupDisplayName(): String {
-        return "Plugin astrid"
+        return "Plugin id names suggesting"
     }
 
     override fun getShortName(): String {

@@ -104,7 +104,7 @@ class IfStatementInspection : AbstractBaseJavaLocalInspectionTool() {
     }
 
     override fun getGroupDisplayName(): String {
-        return "Plugin astrid"
+        return "Plugin id names suggesting"
     }
 
     override fun getShortName(): String {
