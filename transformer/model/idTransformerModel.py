@@ -78,20 +78,20 @@ class IdTransformerModel(pl.LightningModule):
         else:
             return ValueError(f"{self.tusk} tusk is not supported")
 
-    def forward(self, src, num_usages=None):
+    def forward(self, src, num_usages=None, beam_search=True, **kwargs):
         if len(src.shape) != 3:
             raise ValueError("Source shape must be equal 3")
         with torch.no_grad():
-            memory = self.encoder.forward(src, num_usages)
-            out = torch.ones(1, 1, device=src.device, dtype=torch.long) * self.dm.target_init_idx
-            # TODO: use BeamSearch instead of greedy implementation
-            for _ in range(self.max_target_length):
-                new_logits = self.decoder.forward(memory, out, None, None)
-                new_token = torch.argmax(new_logits[:, -1, :], dim=-1, keepdim=True)
-                if new_token[0, 0] == self.dm.target_eos_idx:
-                    break
-                torch.cat((out, new_token), dim=1, out=out)
-        return out[0, 1:]
+            memory = self.encoder(src, num_usages)
+            if not beam_search:
+                out = self.decoder.greedy_search(memory, self.max_target_length,
+                                                 self.dm.target_init_idx,
+                                                 self.dm.target_eos_idx)
+            else:
+                out = self.decoder.beam_search(memory, self.max_target_length,
+                                               self.dm.target_init_idx,
+                                               self.dm.target_eos_idx, **kwargs)
+        return out
 
     def training_step(self, batch, batch_idx):
         loss, predictions, targets = self.step(batch, batch_idx)
