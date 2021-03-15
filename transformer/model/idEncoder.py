@@ -65,8 +65,8 @@ class IdEncoder(nn.Module):
         :return: UxBxH -- memory that will be fed to decoder
         """
         t = x.transpose(0, 1).contiguous()  # BxUxL -> UxBxL
-        t = self.sequence_encoder.forward(t)  # UxBxL -> UxBxE
-        t = self.usage_encoder.forward(t, num_usages)  # UxBxE -> UxBxH
+        t = self.sequence_encoder(t)  # UxBxL -> UxBxE
+        t = self.usage_encoder(t, num_usages)  # UxBxE -> UxBxH
         return t  # UxBxH memory that will be fed to decoder
 
 
@@ -166,5 +166,5 @@ class UsageEncoder(nn.Module):
         t = self.positional_encoder(x)  # UxBxE -> UxBxE
         # Do not want padding usages to participate in attention
         padding_mask = generate_padding_mask(num_usages, self.max_num_usages, device=t.device)
-        t = self.encoder.forward(t, src_key_padding_mask=padding_mask)  # UxBxE -> UxBxH
+        t = self.encoder(t, src_key_padding_mask=padding_mask)  # UxBxE -> UxBxH
         return t  # UxBxH

@@ -117,17 +117,17 @@ class IdTransformerModel(pl.LightningModule):
         src, tgt = batch
         x, num_usages, _ = src
         tgt, tgt_length = tgt
-        memory = self.encoder.forward(x, num_usages)
-        out = self.decoder.forward(memory, tgt, num_usages, tgt_length)
-        tgt_to_loss = torch.constant_pad_nd(tgt, (0, 1), self.dm.target_pad_idx)[..., 1:]  # BxT
-        # [[<s>, <token>, </s>, <pad>]] -> [[<token>, </s>, <pad>, <pad>]]
-        out_to_loss = out.transpose(1, 2)  # BxTxV -> BxVxT
+        memory = self.encoder(x, num_usages)
+        out = self.decoder(memory, tgt, num_usages, tgt_length)
+        tgt_to_loss = torch.constant_pad_nd(tgt, (0, 0, 0, 1), self.dm.target_pad_idx)[..., 1:]  # BxT
+        # [[<s>], [<token>], [</s>], [<pad>]]] -> [[<token>], [</s>], [<pad>], [<pad>]]
+        out_to_loss = out.transpose(1, 2)  # TxBxV -> TxVxB
         return self.loss(out_to_loss, tgt_to_loss), out, tgt
 
     def configure_optimizers(self):
         def schedule(step, warmup_steps=len(self.dm.trainloader)):
             x = (step + 1) / warmup_steps
-            return min(x, x ** (-0.5))
+            return min(1, x ** (-0.5))
 
         optimizer = torch.optim.Adam(self.parameters(), lr=self.max_lr)
         scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule)
