@@ -9,8 +9,8 @@ from pytorch_lightning.loggers import WandbLogger
 from dataset.idDataModule import IdDataModule
 from model.idTransformerModel import IdTransformerModel
 
-logger = logging.getLogger("wandb")
-logger.setLevel(logging.WARNING)
+import time
+
 warnings.filterwarnings("ignore")
 
 
@@ -19,6 +19,8 @@ def train(cfg):
     name_of_run = cfg.model.name_of_run
     logger = True
     if cfg.show_in_wandb:
+        logger = logging.getLogger("wandb")
+        logger.setLevel(logging.WARNING)
         # Initializing wandb logger.
         logger = WandbLogger(name=name_of_run, project='IdTransformer', log_model=True)
         logger.log_hyperparams(cfg)
@@ -30,12 +32,13 @@ def train(cfg):
     if cfg.show_in_wandb:
         logger.watch(model, log='all')
     monitor_metric = "val_top1" if model.tusk == "classification" else "val_accuracy"
+    t = time.gmtime()
     checkpoint_callback = ModelCheckpoint(save_last=True,
                                           save_top_k=3,
                                           mode="max",
                                           monitor=monitor_metric,
                                           dirpath=cfg.model.checkpoints_dir,
-                                          filename=f"{name_of_run}-{cfg.dataset.name}-{{epoch:02d}}-{{{monitor_metric}:.2f}}")
+                                          filename=f"{t.tm_mday:02}.{t.tm_mon:02}-{name_of_run}-{cfg.dataset.name}-{{epoch:02d}}-{{{monitor_metric}:.2f}}")
     trainer = pl.Trainer(max_epochs=cfg.model.max_epochs,
                          logger=logger,
                          gpus=cfg.model.gpus,
