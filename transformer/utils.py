@@ -8,6 +8,8 @@ EOS_TOKEN = "</s>"
 PAD_TOKEN = "<pad>"
 UNK_TOKEN = "<unk>"
 VAR_TOKEN = "<var>"
+STR_TOKEN = "<str>"
+NUM_TOKEN = "<num>"
 TOKEN_DELIMITER = "\u2581"
 
 JAVA_SMALL_TRAIN = {"cassandra-dtest-shaded", "gradle", "intellij-community", "presto-root", "wildfly-parent",
@@ -92,7 +94,7 @@ def camel_case_split(name):
     :param name: name that you want to tokenize,
     :return: list of tokens.
     """
-    if name == VAR_TOKEN:
+    if name in [VAR_TOKEN, STR_TOKEN, NUM_TOKEN]:
         return [name]
     return re.sub('([A-Z]?[a-z]+)', r' \1 ',
                   re.sub('([A-Z]+)', r' \1',
