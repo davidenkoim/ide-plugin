@@ -22,5 +22,5 @@ public interface IdNamesSuggestingModelRunner {
      * @param usageNGrams : n-grams from which model should get probability of the last token.
      * @return probability, modelPriority
      */
-    Pair<Double, Integer> getProbability(List<List<String>> usageNGrams);
+    Pair<Double, Integer> getProbability(List<List<String>> usageNGrams, boolean forgetUsages);
 }

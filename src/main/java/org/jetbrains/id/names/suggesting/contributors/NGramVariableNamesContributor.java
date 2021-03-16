@@ -42,13 +42,13 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
     }
 
     @Override
-    public Pair<Double, Integer> getProbability(PsiVariable variable) {
+    public Pair<Double, Integer> getProbability(PsiVariable variable, boolean forgetUsages) {
         IdNamesNGramModelRunner modelRunner = getModelRunnerToContribute(variable);
         if (modelRunner == null || !isSupported(variable)) {
             return new Pair<>(0.0, 0);
         }
         modelOrder = modelRunner.getOrder();
-        return modelRunner.getProbability(findUsageNGrams(variable));
+        return modelRunner.getProbability(findUsageNGrams(variable), forgetUsages);
     }
 
     public abstract @Nullable IdNamesNGramModelRunner getModelRunnerToContribute(@NotNull PsiVariable variable);

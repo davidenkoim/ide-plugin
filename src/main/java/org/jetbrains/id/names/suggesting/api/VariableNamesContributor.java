@@ -27,5 +27,5 @@ public interface VariableNamesContributor {
      * @param variable  some variable.
      * @return          pair of probability and model priority.
      */
-    Pair<Double, Integer> getProbability(PsiVariable variable);
+    Pair<Double, Integer> getProbability(PsiVariable variable, boolean forgetUsages);
 }

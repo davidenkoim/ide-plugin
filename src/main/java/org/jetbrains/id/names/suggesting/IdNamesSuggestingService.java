@@ -10,6 +10,7 @@ import com.intellij.util.SmartList;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
+import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -19,8 +20,8 @@ import java.util.stream.Collectors;
 public class IdNamesSuggestingService {
     public static final int PREDICTION_CUTOFF = 10;
 
-    public static IdNamesSuggestingService getInstance(@NotNull Project project) {
-        return ServiceManager.getService(project, IdNamesSuggestingService.class);
+    public static IdNamesSuggestingService getInstance() {
+        return ServiceManager.getService(IdNamesSuggestingService.class);
     }
 
     public LinkedHashMap<String, Double> suggestVariableName(@NotNull PsiVariable variable) {
@@ -64,7 +65,7 @@ public class IdNamesSuggestingService {
         double nameProbability = 0.0;
         int prioritiesSum = 0;
         for (final VariableNamesContributor modelContributor : VariableNamesContributor.EP_NAME.getExtensions()) {
-            Pair<Double, Integer> probPriority = modelContributor.getProbability(variable);
+            Pair<Double, Integer> probPriority = modelContributor.getProbability(variable, modelContributor.getClass() != GlobalVariableNamesContributor.class);
             nameProbability += probPriority.getFirst() * probPriority.getSecond();
             prioritiesSum += probPriority.getSecond();
         }

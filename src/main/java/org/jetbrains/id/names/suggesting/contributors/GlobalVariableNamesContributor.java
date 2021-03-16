@@ -8,7 +8,7 @@ import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
 public class GlobalVariableNamesContributor extends NGramVariableNamesContributor {
     @Override
     public IdNamesNGramModelRunner getModelRunnerToContribute(@NotNull PsiVariable variable) {
-        return (IdNamesNGramModelRunner) IdNamesSuggestingModelManager.getInstance(variable.getProject())
-            .getModelRunner(this.getClass().getName());
+        return (IdNamesNGramModelRunner) IdNamesSuggestingModelManager.getInstance()
+            .getModelRunner(this.getClass());
     }
 }

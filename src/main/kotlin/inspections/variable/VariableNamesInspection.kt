@@ -24,7 +24,7 @@ class VariableNamesInspection : AbstractBaseJavaLocalInspectionTool() {
             when (variable) {
                 null -> return
                 else -> {
-                    val probability = IdNamesSuggestingService.getInstance(holder.project).getVariableNameProbability(variable)
+                    val probability = IdNamesSuggestingService.getInstance().getVariableNameProbability(variable)
                     if (probability < probabilityCutoff) {
                         holder.registerProblem(variable.nameIdentifier ?: variable,
                             "There are suggestions for variable name",
@@ -41,7 +41,7 @@ class VariableNamesInspection : AbstractBaseJavaLocalInspectionTool() {
         override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
             val editor = FileEditorManager.getInstance(project).selectedTextEditor!!
             val inplaceRefactoring = ModifiedMemberInplaceRenamer(variable.element!!, null, editor)
-            inplaceRefactoring.performInplaceRefactoring(IdNamesSuggestingService.getInstance(project)
+            inplaceRefactoring.performInplaceRefactoring(IdNamesSuggestingService.getInstance()
                     .suggestVariableName(variable.element!!))
         }
 

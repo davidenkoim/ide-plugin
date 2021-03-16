@@ -1,5 +1,6 @@
 package org.jetbrains.id.names.suggesting.impl;
 
+import com.intellij.completion.ngram.slp.counting.Counter;
 import com.intellij.completion.ngram.slp.counting.giga.GigaCounter;
 import com.intellij.completion.ngram.slp.counting.trie.ArrayTrieCounter;
 import com.intellij.completion.ngram.slp.modeling.ngram.JMModel;
@@ -20,15 +21,14 @@ import kotlin.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
-import org.jetbrains.id.names.suggesting.IdNamesSuggestingService;
-import org.jetbrains.id.names.suggesting.Prediction;
-import org.jetbrains.id.names.suggesting.VocabularyManager;
+import org.jetbrains.id.names.suggesting.*;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
 
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -87,9 +87,11 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
      * @return pair of probability and model priority.
      */
     @Override
-    public Pair<Double, Integer> getProbability(List<List<String>> usageNGrams) {
+    public Pair<Double, Integer> getProbability(List<List<String>> usageNGrams, boolean forgetUsages) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
-        allUsageNGramIndices.forEach(this::forgetUsage);
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::forgetUsage);
+        }
         double probability = 0.0;
         int usagePrioritiesSum = 0;
         for (List<Integer> usageNGramIndices : allUsageNGramIndices) {
@@ -97,7 +99,9 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
             probability += probPriority.getFirst() * probPriority.getSecond();
             usagePrioritiesSum += probPriority.getSecond();
         }
-        allUsageNGramIndices.forEach(this::learnUsage);
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::learnUsage);
+        }
         return new Pair<>(probability / usagePrioritiesSum, getModelPriority());
     }
 
@@ -156,12 +160,12 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     /**
      * Gets estimation of context usage count according to {@link IdNamesNGramModelRunner#myModel}.
      * It is estimated as a weighted sum of context counts of different size.
-     *
+     * <p>
      * Detailed explanation.
      * Consider context sequence {C_i, ..., C_k} as C(i,k) and order of n-gram as N.
      * Then final estimation of context usage count will be: sum from i=0 to N-1 of 1/2^i * count(C(i, N-1)).
      * It is very similar to Jelinek-Mercer smoothing, which is used in {@link com.intellij.completion.ngram.slp.modeling.ngram.JMModel}.
-     *
+     * <p>
      * May be it is better to assign it to 1 for all sequences,
      * but imho we have to evaluate some metrics to make that decision.
      *
@@ -203,17 +207,32 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return null;
     }
 
-    public void learnProject(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
-        progressIndicator.setIndeterminate(false);
+    public void learnProject(@NotNull Project project, @Nullable ProgressIndicator progressIndicator) {
+        if (progressIndicator != null) {
+            progressIndicator.setIndeterminate(false);
+        }
         Collection<VirtualFile> files = FileTypeIndex.getFiles(JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project));
         double progress = 0;
         final double total = files.size();
+        System.out.printf("Training NGram model on %s...\n", project.getName());
+        Instant start = Instant.now();
         for (VirtualFile file : files) {
             ObjectUtils.consumeIfNotNull(PsiManager.getInstance(project).findFile(file), this::learnPsiFile);
-            progressIndicator.setText2(file.getPath());
-            progressIndicator.setFraction(++progress / total);
+            System.out.printf("Status:\t%.2f%%\r", ++progress / total * 100.);
+            if (progressIndicator != null) {
+                progressIndicator.setText2(file.getPath());
+                progressIndicator.setFraction(progress / total);
+            }
         }
+        Instant end = Instant.now();
+        Duration delta = Duration.between(start, end);
+        NotificationsUtil.notify(project,
+                "NGram model training is completed.",
+                String.format("Time of training on %s: %d ms.",
+                        project.getName(),
+                        delta.toMillis()));
+        System.out.printf("Done in %d min. %.1f s.\n", delta.toMinutes(), delta.toMillis() / 1000.);
     }
 
     public void learnPsiFile(@NotNull PsiFile file) {
@@ -291,6 +310,10 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
             e.printStackTrace();
         }
         return (counterFile.length() + vocabularyFile.length() + rememberedVariablesFile.length()) / (1024. * 1024);
+    }
+
+    public void load() {
+        load(null);
     }
 
     public void load(@Nullable ProgressIndicator progressIndicator) {

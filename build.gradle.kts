@@ -125,21 +125,34 @@ tasks {
         channels(pluginVersion.split('-').getOrElse(1) { "default" }.split('.').first())
     }
 
-//    runIde {
-//        jvmArgs = listOf("-Xmx8G")
-//    }
+    runIde {
+        jvmArgs = listOf("-Xmx8G")
+    }
 
 //    varMiner part
-    runIde {
-        val dataset: String? by project
-        args = listOfNotNull("varMiner", dataset)
-        jvmArgs = listOf("-Djava.awt.headless=true")
-        maxHeapSize = "8g"
-    }
+//    runIde {
+//        val dataset: String? by project
+//        args = listOfNotNull("varMiner", dataset)
+//        jvmArgs = listOf("-Djava.awt.headless=true")
+//        maxHeapSize = "8g"
+//    }
 
-    register("runVarMiner") {
+//    register("runVarMiner") {
+//        dependsOn(runIde)
+//    }
+
+//    modelsEvaluator part
+//    runIde {
+//        val dataset: String? by project
+//        args = listOfNotNull("modelsEvaluator", dataset)
+//        jvmArgs = listOf("-Djava.awt.headless=true")
+//        maxHeapSize = "8g"
+//    }
+
+    register("runModelsEvaluator") {
         dependsOn(runIde)
     }
+
 
     register("generateUpdatePluginsXML") {
         doLast {

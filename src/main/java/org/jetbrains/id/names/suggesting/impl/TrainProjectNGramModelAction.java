@@ -23,21 +23,12 @@ public class TrainProjectNGramModelAction extends AbstractTrainModelAction {
     protected void doActionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         assert project != null;
-        IdNamesSuggestingModelManager modelManager = IdNamesSuggestingModelManager.getInstance(project);
+        IdNamesSuggestingModelManager modelManager = IdNamesSuggestingModelManager.getInstance();
         ProgressManager.getInstance().run(new Task.Backgroundable(project, IdNamesSuggestingBundle.message("training.task.title")) {
             @Override
             public void run(@NotNull ProgressIndicator progressIndicator) {
                 progressIndicator.setText(IdNamesSuggestingBundle.message("training.progress.indicator.text", project.getName()));
-                ReadAction.nonBlocking(() -> {
-                    Instant start = Instant.now();
-                    modelManager.trainProjectNGramModel(project, progressIndicator);
-                    Instant end = Instant.now();
-                    NotificationsUtil.notify(project,
-                            "Training of project model is completed.",
-                            String.format("Time of training on %s: %dms.",
-                                    project.getName(),
-                                    Duration.between(start, end).toMillis()));
-                })
+                ReadAction.nonBlocking(() -> modelManager.trainProjectNGramModel(project, progressIndicator))
                         .inSmartMode(project)
                         .executeSynchronously();
             }

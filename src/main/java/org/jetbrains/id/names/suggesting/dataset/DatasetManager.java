@@ -32,10 +32,14 @@ import static java.lang.Integer.min;
 import static java.lang.Math.abs;
 
 public class DatasetManager {
-    private static final String TOKEN_DELIMITER = "\u2581";
-    public static int NGramLengthBeforeUsage = 6;
-    public static int NGramLengthAfterUsage = 6;
-    public static String VariableToken = "<var>";
+    public static final String TOKEN_DELIMITER = "\u2581";
+    public static final String STRING_TOKEN = "<str>";
+    public static final String NUMBER_TOKEN = "<num>";
+    public static final String VARIABLE_TOKEN = "<var>";
+    public static final List<String> NumberTypes = Arrays.asList("INTEGER_LITERAL", "LONG_LITERAL", "FLOAT_LITERAL", "DOUBLE_LITERAL");
+    public static final List<String> IntegersToLeave = Arrays.asList("0", "1", "32", "64");
+    public static int NGramLengthBeforeUsage = 20;
+    public static int NGramLengthAfterUsage = 20;
     private static final Path DatasetDir = Paths.get(PathManager.getSystemPath(), "dataset");
 
     public static void build(@NotNull Project project) {
@@ -111,11 +115,7 @@ public class DatasetManager {
                 .onRange(new TextRange(0, max(0, element.getTextOffset() - 1)))
                 .forceIgnore(node -> node instanceof PsiComment)
                 .filter(IdNamesNGramModelRunner::shouldLex)) {
-            if (isVariableOrReference(variable, token)) {
-                tokens.add(VariableToken);
-            } else {
-                tokens.add(token.getText());
-            }
+            tokens.add(processToken(token, variable));
             if (--order < 1) {
                 break;
             }
@@ -129,11 +129,7 @@ public class DatasetManager {
                 .onRange(new TextRange(min(element.getTextOffset(), file.getTextLength()), file.getTextLength()))
                 .forceIgnore(node -> node instanceof PsiComment)
                 .filter(IdNamesNGramModelRunner::shouldLex)) {
-            if (isVariableOrReference(variable, token)) {
-                tokens.add(VariableToken);
-            } else {
-                tokens.add(token.getText());
-            }
+            tokens.add(processToken(token, variable));
             if (--order < 1) {
                 break;
             }
@@ -143,6 +139,23 @@ public class DatasetManager {
                 abs(variable.getTextOffset() - element.getTextOffset())
         );
     }
+
+    private static String processToken(@NotNull PsiElement token, @NotNull PsiVariable variable) {
+        String text = token.getText();
+        if (token.getParent() instanceof PsiLiteral) {
+            String literalType = ((PsiJavaToken) token).getTokenType().toString();
+            if (literalType.equals("STRING_LITERAL")) {
+                return text.length() > 10 ? STRING_TOKEN : text;
+            }
+            if (NumberTypes.contains(literalType)) {
+                return IntegersToLeave.contains(text) ? text : NUMBER_TOKEN;
+            }
+        } else if (isVariableOrReference(variable, token)) {
+            return VARIABLE_TOKEN;
+        }
+        return text;
+    }
+
 
     public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner, @NotNull PsiFile file) {
 //        Unknown problems when using GlobalSearchScope.projectScope. Most likely there are too many fields and searching breaks.

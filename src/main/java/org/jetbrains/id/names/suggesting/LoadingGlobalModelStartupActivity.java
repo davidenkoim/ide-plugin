@@ -16,10 +16,8 @@ public class LoadingGlobalModelStartupActivity implements StartupActivity {
         ProgressManager.getInstance().run(new Task.Backgroundable(project, IdNamesSuggestingBundle.message("loading.global.model")) {
             @Override
             public void run(@NotNull ProgressIndicator progressIndicator) {
-                ReadAction.nonBlocking(() -> {
-                    ((IdNamesNGramModelRunner) IdNamesSuggestingModelManager.getInstance(project)
-                            .getModelRunner(GlobalVariableNamesContributor.class.getName())).load(progressIndicator);
-                })
+                ReadAction.nonBlocking(() -> ((IdNamesNGramModelRunner) IdNamesSuggestingModelManager.getInstance()
+                        .getModelRunner(GlobalVariableNamesContributor.class)).load(progressIndicator))
                         .inSmartMode(project)
                         .executeSynchronously();
             }

@@ -19,16 +19,17 @@
     <extensions defaultExtensionNs="com.intellij">
         <registryKey key="developer.mode" description="Registry for showing id names suggesting plugin notifications"
                      defaultValue="True" restartRequired="false"/>
-        <!-- varMiner part-->
+        <!-- Headless running part-->
         <appStarter implementation="varMiner.PluginRunner"/>
-        <!-- End of varMiner part-->
+        <appStarter implementation="modelsEvaluator.PluginRunner"/>
+        <!-- End of headless running part-->
         <intentionAction>
             <className>org.jetbrains.id.names.suggesting.impl.SuggestVariableNamesIntention</className>
         </intentionAction>
-        <projectService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager"/>
-        <projectService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingService"/>
-        <backgroundPostStartupActivity
-                implementation="org.jetbrains.id.names.suggesting.LoadingGlobalModelStartupActivity"/>
+        <applicationService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager"/>
+        <applicationService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingService"/>
+<!--        <backgroundPostStartupActivity-->
+<!--                implementation="org.jetbrains.id.names.suggesting.LoadingGlobalModelStartupActivity"/>-->
         <inspectionToolProvider implementation="inspections.variable.VariableNamesProvider"/>
         <!-- Astrid part-->
         <intentionAction>
