@@ -140,7 +140,8 @@ tasks {
 //    modelsEvaluator part
     runIde {
         val dataset: String? by project
-        args = listOfNotNull("modelsEvaluator", dataset)
+        val saveDir: String? by project
+        args = listOfNotNull("modelsEvaluator", dataset, saveDir)
         jvmArgs = listOf("-Djava.awt.headless=true")
         maxHeapSize = "8g"
     }
