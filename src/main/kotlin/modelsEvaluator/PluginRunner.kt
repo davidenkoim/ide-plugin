@@ -34,7 +34,9 @@ class PluginRunner : ApplicationStarter {
         } catch (e: OutOfMemoryError) {
             println("Not enough memory!")
             println(e.message)
-        } finally {
+        } catch (e: Exception){
+            println(e.message)
+        }  finally {
             exitProcess(0)
         }
     }

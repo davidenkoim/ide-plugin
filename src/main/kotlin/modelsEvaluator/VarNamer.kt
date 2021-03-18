@@ -40,7 +40,6 @@ class VarNamer {
             predictionsFile.parentFile.mkdir()
             predictionsFile.createNewFile()
             predictionsFile.printWriter().print("")
-            val predictionsWriter = FileOutputStream(predictionsFile, true).bufferedWriter()
             val mapper = ObjectMapper()
             val start = Instant.now()
             val psiManager = PsiManager.getInstance(project)
@@ -51,7 +50,7 @@ class VarNamer {
                     val filePath = file.path
                     val filePredictions = HashMap<String, List<VarNamePredictions>>()
                     filePredictions[filePath] = predictPsiFile(psiFile)
-                    predictionsWriter.use {
+                    FileOutputStream(predictionsFile, true).bufferedWriter().use {
                         it.write(mapper.writeValueAsString(filePredictions))
                         it.newLine()
                     }
@@ -71,9 +70,6 @@ class VarNamer {
                 "Done in %d min. %.1f s.\n",
                 minutes, seconds
             )
-        }
-
-        private fun save(project: Project, predictions: Any, dir: Path) {
         }
 
         private fun predictPsiFile(file: PsiFile): List<VarNamePredictions> {
