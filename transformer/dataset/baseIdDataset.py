@@ -8,11 +8,10 @@ from os.path import join, exists
 import torch
 from torchtext import data
 from torchtext.vocab import Vocab
+from tqdm.autonotebook import tqdm
 
 from utils import sub_tokenizer, camel_case_split, INIT_TOKEN, EOS_TOKEN, UNK_TOKEN, VAR_TOKEN, PAD_TOKEN, to_list, \
     split, STR_TOKEN, NUM_TOKEN
-
-from tqdm.autonotebook import tqdm
 
 
 class BaseIdDataset(ABC):
@@ -77,6 +76,10 @@ class BaseIdDataset(ABC):
                                        batch_first=False,
                                        is_target=True,
                                        include_lengths=True)
+        self.example_fields = {'variable': ('target', self.target_field),
+                               'ngrams': ('usages', self.usage_field)}
+        self.dataset_fields = {'target': self.target_field,
+                               'usages': self.usage_field}
         self.setup()
         self.build_vocabs()
 
@@ -150,3 +153,22 @@ class BaseIdDataset(ABC):
                 if len(ex_field) > 0:
                     counter.update(chain.from_iterable(ex_field) if isinstance(ex_field[0], list) else ex_field)
         return list(zip(*nc_list))[1]
+
+    def is_training(self, b):
+        if b:
+            self.usage_field.include_lengths = True
+            self.usage_field.fix_length = self.max_num_usages
+        else:
+            self.usage_field.include_lengths = False
+            self.usage_field.fix_length = None
+
+    def input_from_usages(self, usages, limit_num_usages=20, device="cpu"):
+        src = usages[:limit_num_usages]
+        src = self.usage_field.preprocess(src)
+        return self.usage_field.process([src], device=device)
+
+    def ids_to_tokens(self, token_ids):
+        if isinstance(token_ids, list):
+            return list(map(self.ids_to_tokens, token_ids))
+        else:
+            return self.target_vocabulary.itos[token_ids]

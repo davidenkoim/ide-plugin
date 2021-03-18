@@ -1,6 +1,5 @@
 package org.jetbrains.id.names.suggesting.impl;
 
-import com.intellij.completion.ngram.slp.counting.Counter;
 import com.intellij.completion.ngram.slp.counting.giga.GigaCounter;
 import com.intellij.completion.ngram.slp.counting.trie.ArrayTrieCounter;
 import com.intellij.completion.ngram.slp.modeling.ngram.JMModel;
@@ -42,6 +41,10 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     private final NGramModel myModel;
     private Vocabulary myVocabulary = new Vocabulary();
 
+    public Vocabulary getVocabulary() {
+        return myVocabulary;
+    }
+
     public IdNamesNGramModelRunner(List<Class<? extends PsiNameIdentifierOwner>> supportedTypes, boolean isLargeCorpora) {
         myModel = new JMModel(6, 0.5, isLargeCorpora ? new GigaCounter() : new ArrayTrieCounter());
         this.setSupportedTypes(supportedTypes);
@@ -65,15 +68,19 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
      * @return List of predictions.
      */
     @Override
-    public List<Prediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams) {
+    public List<VarNamePrediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams, boolean forgetUsages) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
-        allUsageNGramIndices.forEach(this::forgetUsage);
-        List<Prediction> predictionList = new ArrayList<>();
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::forgetUsage);
+        }
+        List<VarNamePrediction> predictionList = new ArrayList<>();
         int usagePrioritiesSum = 0;
         for (List<Integer> usageNGramIndices : allUsageNGramIndices) {
             usagePrioritiesSum += predictUsageName(predictionList, usageNGramIndices, getIdTypeFilter(identifierClass));
         }
-        allUsageNGramIndices.forEach(this::learnUsage);
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::learnUsage);
+        }
         return rankUsagePredictions(predictionList, usagePrioritiesSum);
     }
 
@@ -105,9 +112,9 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return new Pair<>(probability / usagePrioritiesSum, getModelPriority());
     }
 
-    private List<Prediction> rankUsagePredictions(List<Prediction> predictionList, int usagePrioritiesSum) {
+    private List<VarNamePrediction> rankUsagePredictions(List<VarNamePrediction> predictionList, int usagePrioritiesSum) {
         Map<String, Double> rankedPredictions = new HashMap<>();
-        for (Prediction prediction : predictionList) {
+        for (VarNamePrediction prediction : predictionList) {
             Double prob = rankedPredictions.get(prediction.getName());
             double addition = prediction.getProbability() * prediction.getPriority() / usagePrioritiesSum;
             if (prob == null) { // If see this prediction for the first time just put it in the map
@@ -120,7 +127,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .stream()
                 .sorted((e1, e2) -> -Double.compare(e1.getValue(), e2.getValue()))
                 .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
-                .map(e -> new Prediction(e.getKey(), e.getValue(), getModelPriority()))
+                .map(e -> new VarNamePrediction(e.getKey(), e.getValue(), getModelPriority()))
                 .collect(Collectors.toList());
     }
 
@@ -128,7 +135,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return usageNGrams.stream().map(myVocabulary::toIndices).collect(Collectors.toList());
     }
 
-    private int predictUsageName(@NotNull List<Prediction> predictionList,
+    private int predictUsageName(@NotNull List<VarNamePrediction> predictionList,
                                  @NotNull List<Integer> usageNGramIndices,
                                  @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
         int usagePriority = getUsagePriority(usageNGramIndices);
@@ -136,7 +143,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .entrySet()
                 .stream()
                 .filter(idTypeFilter)
-                .map(e -> new Prediction(myVocabulary.toWord(e.getKey()),
+                .map(e -> new VarNamePrediction(myVocabulary.toWord(e.getKey()),
                         toProb(e.getValue()),
                         usagePriority))
                 .sorted((pred1, pred2) -> -Double.compare(pred1.getProbability(), pred2.getProbability()))
@@ -232,7 +239,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 String.format("Time of training on %s: %d ms.",
                         project.getName(),
                         delta.toMillis()));
-        System.out.printf("Done in %d min. %.1f s.\n", delta.toMinutes(), delta.toMillis() / 1000.);
+        System.out.printf("Done in %d min. %.1f s.\n", delta.toMinutes(), delta.toMillis() / 1000. - delta.toMinutes() * 60);
     }
 
     public void learnPsiFile(@NotNull PsiFile file) {

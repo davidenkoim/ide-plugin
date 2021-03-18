@@ -194,7 +194,7 @@ class BeamSearchNode(object):
         return self.log_p
 
     def __str__(self):
-        return f"{self.token_ids}: {self.p}"
+        return f"{self.token_ids_array}: {self.p}"
 
     def __repr__(self):
         return str(self)
@@ -203,5 +203,11 @@ class BeamSearchNode(object):
     def p(self):
         return exp(self.log_p)
 
+    @property
     def token_ids_array(self):
         return list(self.token_ids.reshape(-1).cpu().numpy())
+
+    def __lt__(self, other):
+        print("Bad BeamSearchNodes:\n", self, "\n", other)
+        return True
+

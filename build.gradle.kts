@@ -137,20 +137,12 @@ tasks {
 //        maxHeapSize = "8g"
 //    }
 
-//    register("runVarMiner") {
-//        dependsOn(runIde)
-//    }
-
 //    modelsEvaluator part
-//    runIde {
-//        val dataset: String? by project
-//        args = listOfNotNull("modelsEvaluator", dataset)
-//        jvmArgs = listOf("-Djava.awt.headless=true")
-//        maxHeapSize = "8g"
-//    }
-
-    register("runModelsEvaluator") {
-        dependsOn(runIde)
+    runIde {
+        val dataset: String? by project
+        args = listOfNotNull("modelsEvaluator", dataset)
+        jvmArgs = listOf("-Djava.awt.headless=true")
+        maxHeapSize = "8g"
     }
 
 

@@ -3,12 +3,13 @@ package org.jetbrains.id.names.suggesting.contributors;
 import com.google.common.collect.Lists;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.util.ObjectUtils;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.Prediction;
+import org.jetbrains.id.names.suggesting.VarNamePrediction;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
 
@@ -31,13 +32,13 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
     private int modelOrder;
 
     @Override
-    public int contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList) {
+    public int contribute(@NotNull PsiVariable variable, @NotNull List<VarNamePrediction> predictionList, boolean forgetUsages) {
         IdNamesNGramModelRunner modelRunner = getModelRunnerToContribute(variable);
         if (modelRunner == null || !isSupported(variable)) {
             return 0;
         }
         modelOrder = modelRunner.getOrder();
-        predictionList.addAll(modelRunner.suggestNames(variable.getClass(), findUsageNGrams(variable)));
+        predictionList.addAll(modelRunner.suggestNames(variable.getClass(), findUsageNGrams(variable), forgetUsages));
         return modelRunner.getModelPriority();
     }
 
@@ -68,7 +69,7 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
     }
 
     public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner) {
-        return ReferencesSearch.search(identifierOwner)
+        return ReferencesSearch.search(identifierOwner, GlobalSearchScope.fileScope(identifierOwner.getContainingFile()))
                 .findAll()
                 .stream();
     }

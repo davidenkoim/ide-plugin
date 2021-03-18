@@ -4,7 +4,7 @@ import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.psi.PsiVariable;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.id.names.suggesting.Prediction;
+import org.jetbrains.id.names.suggesting.VarNamePrediction;
 
 import java.util.List;
 
@@ -19,7 +19,7 @@ public interface VariableNamesContributor {
      * @param predictionList    container which contains all predictions.
      * @return                  priority of contribution
      */
-    int contribute(@NotNull PsiVariable variable, @NotNull List<Prediction> predictionList);
+    int contribute(@NotNull PsiVariable variable, @NotNull List<VarNamePrediction> predictionList, boolean forgetUsages);
 
     /**
      * Get conditional probability of variable name.

@@ -61,17 +61,13 @@ class JSONIdDataset(BaseIdDataset):
         self.test = self.make_dataset(test_files, dataset)
 
     def make_dataset(self, files, dset):
-        example_fields = {'variable': ('target', self.target_field),
-                          'ngrams': ('usages', self.usage_field)}
-        dataset_fields = {'target': self.target_field,
-                          'usages': self.usage_field}
         dataset = data.Dataset(
             list(tmap(
-                lambda d: data.Example.fromdict(d, example_fields),
+                lambda d: data.Example.fromdict(d, self.example_fields),
                 chain(*map(lambda f: dset[f], files)),
                 mininterval=0.5
             )),
-            dataset_fields)
+            self.dataset_fields)
         for file in files:
             del dset[file]
         return dataset

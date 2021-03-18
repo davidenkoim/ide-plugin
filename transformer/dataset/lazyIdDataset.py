@@ -1,10 +1,9 @@
+from linecache import getline, getlines
 from os.path import join, exists
 
 from torchtext.data import Dataset, Example, Batch
 
 from dataset.baseIdDataset import BaseIdDataset
-
-from linecache import getline, getlines
 
 
 class LazyIdDataset(BaseIdDataset):
@@ -17,18 +16,13 @@ class LazyIdDataset(BaseIdDataset):
         val_path = join(self.dataset_path, self.val_path)
         test_path = join(self.dataset_path, self.test_path)
 
-        example_fields = {'variable': ('target', self.target_field),
-                          'ngrams': ('usages', self.usage_field)}
-        dataset_fields = {'target': self.target_field,
-                          'usages': self.usage_field}
-
         reader_cls = LazyReader if self.lazy_reader_type == "with_cache" else LazyByteReader
         print("Building train dataset...")
-        self.train = Dataset(reader_cls(train_path, example_fields), dataset_fields)
+        self.train = Dataset(reader_cls(train_path, self.example_fields), self.dataset_fields)
         print("Building val dataset...")
-        self.val = Dataset(reader_cls(val_path, example_fields), dataset_fields)
+        self.val = Dataset(reader_cls(val_path, self.example_fields), self.dataset_fields)
         print("Building test dataset...")
-        self.test = Dataset(reader_cls(test_path, example_fields), dataset_fields)
+        self.test = Dataset(reader_cls(test_path, self.example_fields), self.dataset_fields)
 
     def collate_fn(self, batch):
         return Batch(batch, self.train)
@@ -36,7 +30,6 @@ class LazyIdDataset(BaseIdDataset):
 
 class LazyReader:
     """Uses caching and, hence, lots of RAM (crashes in Google Colab)"""
-
     def __init__(self, data_path, example_fields):
         if not exists(data_path):
             raise FileNotFoundError(f"File {data_path} is not found")

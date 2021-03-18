@@ -1,17 +1,17 @@
 package org.jetbrains.id.names.suggesting;
 
-public class Prediction{
+public class VarNamePrediction {
     private final String myName;
     private final double myProbability;
     private final int myPriority;
 
-    public Prediction(String name, double probability, int priority) {
+    public VarNamePrediction(String name, double probability, int priority) {
         myName = name;
         myProbability = probability;
         myPriority = priority;
     }
 
-    public Prediction(String name, double probability) {
+    public VarNamePrediction(String name, double probability) {
         myName = name;
         myProbability = probability;
         myPriority = 1;
@@ -31,8 +31,8 @@ public class Prediction{
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Prediction){
-            return myName.equals(((Prediction) obj).getName());
+        if (obj instanceof VarNamePrediction){
+            return myName.equals(((VarNamePrediction) obj).getName());
         }
         return super.equals(obj);
     }

@@ -1,7 +1,7 @@
 # @package _group_
 
 name: java-small
-path: C:\Users\Igor\IdeaProjects\ide-plugin\build\idea-sandbox\system\dataset\java-small
+path: C:\Users\Igor\IdeaProjects\ide-plugin\dataset\java-small
 type: lazy
 lazy_reader_type: with_cache
 split_strategy: java-small

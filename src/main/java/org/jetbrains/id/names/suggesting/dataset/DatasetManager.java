@@ -94,7 +94,7 @@ public class DatasetManager {
                 .collect(Collectors.toList());
     }
 
-    private static VariableFeatures getVariableFeatures(PsiVariable variable, PsiFile file) {
+    public static VariableFeatures getVariableFeatures(PsiVariable variable, PsiFile file) {
         Stream<PsiReference> elementUsages = findReferences(variable, file);
         return new VariableFeatures(variable,
                 Stream.concat(Stream.of(variable), elementUsages)
