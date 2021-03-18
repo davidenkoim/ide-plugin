@@ -58,7 +58,7 @@ def evaluate():
         global last_inference
         last_inference = LastInference(predictions, variable_features["variable"], time_spent)
         return json.dumps({"predictions": last_inference.predictions,
-                           "time": last_inference.time_spent})
+                           "transformerEvaluationTime": last_inference.time_spent})
 
 
 @app.route('/')
