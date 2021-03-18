@@ -19,7 +19,7 @@ class PluginRunner : ApplicationStarter {
     private val javaSmallTest =
         listOf("hadoop", "libgdx")
 //        listOf("TestProject")
-    private val saveDir = "C:\\Users\\Igor\\IdeaProjects\\ide-plugin\\predictions"
+    private val saveDir = "/content/drive/MyDrive/Id Names Suggesting/predictions"
 
     override fun getCommandName(): String = "modelsEvaluator"
 
