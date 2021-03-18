@@ -6,10 +6,7 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner
-import java.io.BufferedOutputStream
 import java.io.File
-import java.io.FileOutputStream
-import java.io.PrintStream
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess

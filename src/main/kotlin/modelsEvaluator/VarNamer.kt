@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
 class VarNamer {
     companion object {
         private val LOG = logger<VarNamer>()
-        private const val TRANSFORMER_SERVER_URL = "http://127.0.0.1:5000/evaluate"
+        private const val TRANSFORMER_SERVER_URL = "http://f2ca97a6b9ad.ngrok.io/"
         fun predict(project: Project, dir: Path) {
             val files = FileTypeIndex.getFiles(
                 JavaFileType.INSTANCE,
@@ -129,14 +129,14 @@ class VarNamer {
             return nameSuggestions.map { x: VarNamePrediction -> ModelPrediction(x.name, x.probability) }
         }
 
-        private fun predictWithTransformer(variable: PsiVariable): List<*> {
+        private fun predictWithTransformer(variable: PsiVariable): Any {
             val variableFeatures = DatasetManager.getVariableFeatures(variable, variable.containingFile)
             return HttpRequests.post(TRANSFORMER_SERVER_URL, HttpRequests.JSON_CONTENT_TYPE)
                 .connect(HttpRequests.RequestProcessor {
                     val objectMapper = ObjectMapper()
                     it.write(objectMapper.writeValueAsBytes(variableFeatures))
                     val str = it.readString()
-                    objectMapper.readValue(str, List::class.java)
+                    objectMapper.readValue(str, Any::class.java)
                 }, null, LOG)
         }
 
@@ -151,9 +151,9 @@ class VarNamePredictions(
     val nGramPrediction: List<ModelPrediction>,
     val nGramEvaluationTime: Double,
     val transformerPrediction: Any,
-    val transformerEvaluationTime: Double,
+    val transformerResponseTime: Double,
     val linePosition: Int,
     val psiInterface: String
 )
 
-class ModelPrediction(val name: Any, val probability: Double)
+class ModelPrediction(val name: Any, val p: Double)

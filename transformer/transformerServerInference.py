@@ -52,13 +52,13 @@ def evaluate():
         predictions = list(map(lambda prediction:
                                {
                                    "name": model.dm.dataset.ids_to_tokens(prediction[1].token_ids_array)[1:-1],
-                                   "probability": prediction[1].p
+                                   "p": prediction[1].p
                                }, predictions))
         time_spent = time.perf_counter() - start
         global last_inference
-        predictions = json.dumps(predictions)
         last_inference = LastInference(predictions, variable_features["variable"], time_spent)
-        return predictions
+        return json.dumps({"predictions": last_inference.predictions,
+                           "time": last_inference.time_spent})
 
 
 @app.route('/')
