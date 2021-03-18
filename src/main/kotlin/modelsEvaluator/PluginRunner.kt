@@ -19,13 +19,13 @@ class PluginRunner : ApplicationStarter {
     private val javaSmallTest =
         listOf("hadoop", "libgdx")
 //        listOf("TestProject")
-    private val saveDir = "/content/drive/MyDrive/Id Names Suggesting/predictions"
 
     override fun getCommandName(): String = "modelsEvaluator"
 
     override fun main(args: Array<out String>) {
         try {
             val dataset = File(args[1])
+            val saveDir = args[2]
             trainNGramOn(dataset, javaSmallTrain)
 //            evaluateOn(dataset, javaSmallTrain, Paths.get(saveDir, "train"))
             evaluateOn(dataset, javaSmallTest, Paths.get(saveDir, "test"))
