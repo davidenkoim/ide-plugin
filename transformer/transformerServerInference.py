@@ -1,8 +1,10 @@
 import json
 import time
+import warnings
 from collections import namedtuple
 from os.path import join
 
+import torch
 from flask import Flask
 from flask import request
 from flask_ngrok import run_with_ngrok
@@ -13,7 +15,10 @@ from model.idTransformerModel import IdTransformerModel
 
 app = Flask(__name__)
 run_with_ngrok(app)
-DEVICE = "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print("Using device: ", DEVICE)
+warnings.filterwarnings("ignore")
+
 
 def load_model(configs_path=r'C:/Users/Igor/IdeaProjects/ide-plugin/transformer/configs/'):
     cfg = OmegaConf.load(join(configs_path, 'config.yaml'))
@@ -62,3 +67,6 @@ def running():
         else f"Running!<p>Last inference:<p>Time spent: {last_inference.time_spent}<p>" + \
              f"<p>Ground truth: {last_inference.gt}<p>" + \
              f"Predictions: {last_inference.predictions}"
+
+
+app.run()

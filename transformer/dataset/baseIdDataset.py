@@ -6,7 +6,7 @@ from itertools import chain
 from os.path import join, exists
 
 import torch
-from torchtext import data
+from torchtext.legacy import data
 from torchtext.vocab import Vocab
 from tqdm.autonotebook import tqdm
 

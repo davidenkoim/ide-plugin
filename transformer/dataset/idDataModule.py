@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from torchtext import data
+from torchtext.legacy import data
 
 from dataset.jsonIdDataset import JSONIdDataset
 from dataset.lazyIdDataset import LazyIdDataset
@@ -50,6 +50,7 @@ class IdDataModule(pl.LightningDataModule):
                                          collate_fn=self.dataset.collate_fn)
         else:
             raise NotImplementedError(f"There is no implementation for {self.dataset_type} dataset type")
+        self.dataset.is_training(stage == "train")
 
     @property
     def usage_vocab_size(self):

@@ -1,2 +1,1 @@
-export FLASK_APP=transformer/transformerServerInference.py
-flask run
+python transformer/transformerServerInference.py

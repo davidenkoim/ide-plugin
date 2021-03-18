@@ -1,7 +1,7 @@
 from linecache import getline, getlines
 from os.path import join, exists
 
-from torchtext.data import Dataset, Example, Batch
+from torchtext.legacy.data import Dataset, Example, Batch
 
 from dataset.baseIdDataset import BaseIdDataset
 
