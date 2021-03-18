@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
 class VarNamer {
     companion object {
         private val LOG = logger<VarNamer>()
-        private const val TRANSFORMER_SERVER_URL = "http://f2ca97a6b9ad.ngrok.io/"
+        private const val TRANSFORMER_SERVER_URL = "http://127.0.0.1:5000/"
         fun predict(project: Project, dir: Path) {
             val files = FileTypeIndex.getFiles(
                 JavaFileType.INSTANCE,
