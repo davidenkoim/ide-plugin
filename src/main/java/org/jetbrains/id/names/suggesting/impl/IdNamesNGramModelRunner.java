@@ -220,16 +220,19 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         }
         Collection<VirtualFile> files = FileTypeIndex.getFiles(JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project));
-        double progress = 0;
-        final double total = files.size();
+        int progress = 0;
+        final int total = files.size();
         System.out.printf("Training NGram model on %s...\n", project.getName());
         Instant start = Instant.now();
         for (VirtualFile file : files) {
             ObjectUtils.consumeIfNotNull(PsiManager.getInstance(project).findFile(file), this::learnPsiFile);
-            System.out.printf("Status:\t%.2f%%\r", ++progress / total * 100.);
+            double fraction = ++progress / (double) total;
+            if (progress % (total / 10) == 0) {
+                System.out.printf("Status:\t%.0f%%\r", fraction * 100.);
+            }
             if (progressIndicator != null) {
                 progressIndicator.setText2(file.getPath());
-                progressIndicator.setFraction(progress / total);
+                progressIndicator.setFraction(fraction);
             }
         }
         Instant end = Instant.now();
@@ -239,7 +242,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 String.format("Time of training on %s: %d ms.",
                         project.getName(),
                         delta.toMillis()));
-        System.out.printf("Done in %d min. %.1f s.\n", delta.toMinutes(), delta.toMillis() / 1000. - delta.toMinutes() * 60);
+        System.out.printf("Done in %s\n", delta.toString());
     }
 
     public void learnPsiFile(@NotNull PsiFile file) {

@@ -79,15 +79,15 @@ class IdTransformerModel(pl.LightningModule):
             return ValueError(f"{self.tusk} tusk is not supported")
 
     def forward(self, usages, num_usages=None, beam_search=True, limit_num_usages=10, **kwargs):
-        inp = self.dm.dataset.input_from_usages(usages, limit_num_usages=limit_num_usages, device=self.device)
-        if len(inp.shape) != 3:
-            raise ValueError("Source shape must be equal 3")
+        inp = usages[:limit_num_usages].unsqueeze(0)
         with torch.no_grad():
             memory = self.encoder(inp, num_usages)
             if beam_search:
                 out = self.decoder.beam_search(memory, self.max_target_length,
                                                self.dm.target_init_idx,
-                                               self.dm.target_eos_idx, **kwargs)
+                                               self.dm.target_eos_idx,
+                                               self.dm.target_pad_idx,
+                                               **kwargs)
             else:
                 out = self.decoder.greedy_search(memory, self.max_target_length,
                                                  self.dm.target_init_idx,

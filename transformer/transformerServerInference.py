@@ -20,7 +20,9 @@ print("Using device: ", DEVICE)
 warnings.filterwarnings("ignore")
 
 CHECKPOINT_PATH = r"/content/drive/MyDrive/Id Names Suggesting/checkpoints/11.03-transformer_encoder-java-small-epoch=02-val_accuracy=0.19.ckpt"
-CONFIGS_DIR = r'/content/drive/MyDrive/Id Names Suggesting/transformer/configs'
+CONFIGS_DIR = r"/content/drive/MyDrive/Id Names Suggesting/transformer/configs"
+# CHECKPOINT_PATH = r"C:\Users\Igor\IdeaProjects\ide-plugin\transformer\checkpoints\11.03-transformer_encoder-java-small-epoch=02-val_accuracy=0.19.ckpt"
+# CONFIGS_DIR = r"C:\Users\Igor\IdeaProjects\ide-plugin\transformer\configs"
 
 
 def load_model(configs_path=r'transformer/configs/'):

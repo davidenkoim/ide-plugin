@@ -30,13 +30,13 @@ class PluginRunner : ApplicationStarter {
 //            evaluateOn(dataset, javaSmallTrain, Paths.get(saveDir, "train"))
             evaluateOn(dataset, javaSmallTest, Paths.get(saveDir, "test"))
         } catch (e: IllegalArgumentException) {
-            println(e.message)
+            e.printStackTrace()
         } catch (e: OutOfMemoryError) {
             println("Not enough memory!")
-            println(e.message)
-        } catch (e: Exception){
-            println(e.message)
-        }  finally {
+            e.printStackTrace()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
             exitProcess(0)
         }
     }

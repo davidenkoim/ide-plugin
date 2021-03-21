@@ -162,11 +162,6 @@ class BaseIdDataset(ABC):
             self.usage_field.include_lengths = False
             self.usage_field.fix_length = None
 
-    def input_from_usages(self, usages, limit_num_usages=20, device="cpu"):
-        src = usages[:limit_num_usages]
-        src = self.usage_field.preprocess(src)
-        return self.usage_field.process([src], device=device)
-
     def ids_to_tokens(self, token_ids):
         if isinstance(token_ids, list):
             return list(map(self.ids_to_tokens, token_ids))

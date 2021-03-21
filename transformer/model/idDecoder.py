@@ -57,10 +57,15 @@ class IdDecoder(nn.Module):
         t = self.fc(t)  # TxBxH -> TxBxV
         return t  # TxBxV
 
+    def train(self, mode=True):
+        if not mode:
+            self.max_memory_length = None
+            self.max_tgt_length = None
+        return super().train(mode)
+
     def greedy_search(self, encoder_output, length, init_idx, eos_idx):
         """
         :param encoder_output: Mx1xE,
-        :param input: 1xT - indexes,
         :param length: length of generated sequence,
         :param init_idx: index of INIT token,
         :param eos_idx: index of EOS token.
@@ -75,18 +80,21 @@ class IdDecoder(nn.Module):
         return out[1:, 0]
 
     # Based on https://github.com/budzianowski/PyTorch-Beam-Search-Decoding/blob/master/decode_beam.py
-    def beam_search(self, encoder_output, length, init_idx, eos_idx, topk=10, beam_width=20):
+    def beam_search(self, encoder_output, max_output_length, init_idx, eos_idx, pad_idx=None, topk=10, beam_width=40,
+                    batch_size=10):
         """
         :param encoder_output: Mx1xE,
-        :param length: length of generated sequence,
+        :param max_output_length: length of generated sequence,
         :param init_idx: index of INIT token,
-        :param eos_idx: index of EOS token.
+        :param eos_idx: index of EOS token,
+        :param pad_idx: index of PAD token.
         :param topk:
         :param beam_width:
+        :param batch_size:
         """
 
         # Start with the start of the sentence token
-        init_token = torch.full((1, 1), init_idx, device=encoder_output.device, dtype=torch.long)
+        init_token = torch.full((1, 1), init_idx, dtype=torch.long)
 
         # Number of sentence to generate
         endnodes = []
@@ -101,54 +109,74 @@ class IdDecoder(nn.Module):
 
         # start beam search
         # give up when decoding takes too long
-        while qsize < 2000:
-            # TODO: batching if slow
-            # # fetch batch of the best nodes
-            # scores, inputs = [], []
-            # while qsize > 0 and len(inputs) < batch_size:
-            #     score, n = nodes.get()
-            #     scores.append(score)
-            #     if n.token_ids[0, -1] == eos_idx:
-            #         endnodes.append((score, n))
-            #         continue
-            #     inputs.append(n.token_ids)
-            #     qsize -= 1
-            #
-            # # if we reached maximum # of sentences required or there is nothing to search from
-            # if len(endnodes) >= topk or len(inputs) == 0:
-            #     break
-            #
-            # inputs = torch.cat(inputs, dim=-1)
+        while qsize < 10000:
+            if batch_size is None:
+                # fetch the best node
+                score, n = nodes.get()
+                qsize -= 1
+                decoder_input = n.token_ids
 
-            # fetch the best node
-            score, n = nodes.get()
-            qsize -= 1
-            decoder_input = n.token_ids
+                if decoder_input.shape[0] >= max_output_length or decoder_input[-1, 0] == eos_idx:
+                    endnodes.append((score, n))
+                    # if we reached maximum # of sentences required
+                    if len(endnodes) >= topk:
+                        break
+                    else:
+                        continue
 
-            if decoder_input.shape[0] >= length or decoder_input[-1, 0] == eos_idx:
-                endnodes.append((score, n))
-                # if we reached maximum # of sentences required
+                # decode for one step using decoder
+                decoder_output = self(encoder_output, decoder_input.to(encoder_output.device))[-1:, :, :]
+                decoder_output = log_softmax(decoder_output, dim=-1).cpu()
+
+                # PUT HERE REAL BEAM SEARCH OF TOP
+                log_prob, indexes = torch.topk(decoder_output, beam_width)
+
+                for i in range(beam_width):
+                    new_idx = indexes[:, :, i]
+                    log_p = log_prob[0, 0, i].item()
+
+                    node = BeamSearchNode(torch.cat((decoder_input, new_idx)), n.log_p + log_p)
+                    score = -node.eval()
+                    nodes.put((score, node))
+                    qsize += 1
+            else:
+                assert pad_idx is not None, "Specify pad_idx, please."
+                # fetch batch of the best nodes
+                decoder_inputs, log_ps = [], []
+                while qsize > 0 and len(decoder_inputs) < batch_size:
+                    score, n = nodes.get()
+                    qsize -= 1
+                    token_ids = n.token_ids
+                    if token_ids.shape[0] >= max_output_length or token_ids[-1, 0] == eos_idx:
+                        endnodes.append((score, n))
+                        if len(endnodes) >= topk:
+                            break
+                        else:
+                            continue
+                    decoder_inputs.append(token_ids)
+                    log_ps.append(n.log_p)
+
                 if len(endnodes) >= topk:
                     break
-                else:
-                    continue
 
-            # decode for one step using decoder
-            decoder_output = self(encoder_output, decoder_input)[-1:, :, :]
-            decoder_output = log_softmax(decoder_output, dim=-1)
+                # pad decoder_inputs
+                tgt_lengths = torch.LongTensor(list(map(lambda x: x.shape[0], decoder_inputs)), device=encoder_output.device)
+                max_length = tgt_lengths.max()
+                decoder_input = torch.cat([
+                    torch.constant_pad_nd(inp, (0, 0, 0, max_length - inp.shape[0]), pad_idx)
+                    for inp in decoder_inputs], dim=1).to(encoder_output.device)
 
-            # PUT HERE REAL BEAM SEARCH OF TOP
-            log_prob, indexes = torch.topk(decoder_output, beam_width)
-
-            for i in range(beam_width):
-                new_idx = indexes[:, :, i]
-                log_p = log_prob[0, 0, i].cpu().item()
-
-                node = BeamSearchNode(torch.cat((decoder_input, new_idx)), n.log_p + log_p)
-                score = -node.eval()
-                nodes.put((score, node))
-                qsize += 1
-        return endnodes
+                # decode batch
+                decoder_outputs = self(encoder_output.expand(-1, decoder_input.shape[1], -1), decoder_input, tgt_length=tgt_lengths).cpu()
+                for i, (decoder_input, log_p, tgt_length) in enumerate(zip(decoder_inputs, log_ps, tgt_lengths)):
+                    decoder_output = log_softmax(decoder_outputs[tgt_length - 1, i], dim=-1)
+                    new_log_ps, new_idxs = torch.topk(decoder_output, beam_width)
+                    for new_log_p, new_idx in zip(new_log_ps, new_idxs):
+                        node = BeamSearchNode(torch.cat((decoder_input, new_idx.view(1, 1))), log_p + new_log_p.item())
+                        score = -node.eval()
+                        nodes.put((score, node))
+                        qsize += 1
+        return sorted(endnodes)
 
     def get_embeddings(self, tgt):
         """
@@ -208,6 +236,4 @@ class BeamSearchNode(object):
         return list(self.token_ids.reshape(-1).cpu().numpy())
 
     def __lt__(self, other):
-        print("Bad BeamSearchNodes:\n", self, "\n", other)
-        return True
-
+        return self.log_p < other.log_p

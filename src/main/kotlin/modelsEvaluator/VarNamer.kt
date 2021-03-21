@@ -1,5 +1,6 @@
 package modelsEvaluator
 
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.diagnostic.logger
@@ -12,6 +13,7 @@ import com.intellij.psi.*
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.io.HttpRequests
+import com.jetbrains.rd.util.string.printToString
 import org.jetbrains.id.names.suggesting.VarNamePrediction
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
@@ -22,28 +24,35 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.*
-import kotlin.math.roundToInt
+import kotlin.streams.asSequence
 
 class VarNamer {
     companion object {
         private val LOG = logger<VarNamer>()
         private const val TRANSFORMER_SERVER_URL = "http://127.0.0.1:5000/"
         fun predict(project: Project, dir: Path) {
-            val files = FileTypeIndex.getFiles(
-                JavaFileType.INSTANCE,
-                GlobalSearchScope.projectScope(project)
-            )
-            var progress = .0
-            val total = files.size.toDouble()
-
+            val mapper = ObjectMapper()
             val predictionsFile: File = dir.resolve(project.name + "_predictions.txt").toFile()
             predictionsFile.parentFile.mkdir()
             predictionsFile.createNewFile()
-            predictionsFile.printWriter().print("")
-            val mapper = ObjectMapper()
+            val predictedFilePaths = predictionsFile.bufferedReader().lines().asSequence()
+                .map { line ->
+                    try {
+                        mapper.readValue(line, Map::class.java).keys.first()
+                    } catch (e: JsonProcessingException) {
+                        null
+                    }
+                }.filterNotNull()
+                .toHashSet()
+            val files = FileTypeIndex.getFiles(
+                JavaFileType.INSTANCE,
+                GlobalSearchScope.projectScope(project)
+            ).filter { file -> file.path !in predictedFilePaths }
+            var progress = 0
+            val total = files.size
             val start = Instant.now()
             val psiManager = PsiManager.getInstance(project)
-            print("Number of files to parse: ${files.size}")
+            println("Number of files to parse: $total")
             for (file in files) {
                 val psiFile = psiManager.findFile(file)
                 if (psiFile != null) {
@@ -54,21 +63,26 @@ class VarNamer {
                         it.write(mapper.writeValueAsString(filePredictions))
                         it.newLine()
                     }
-                    val timeLeft = Duration.between(start, Instant.now()).toMillis() * (total / ++progress - 1) / 1000.0
-                    val minutesLeft = timeLeft.roundToInt() / 60
-                    val secondsLeft = timeLeft - minutesLeft * 60.0
-                    System.out.printf("Status:\t%.2f%%; Time left:\t%d min. %.1f s.\r", progress / total * 100.0, minutesLeft, secondsLeft)
+                    val fraction = ++progress / total.toDouble()
+                    if (progress % (total / 100) == 0) {
+                        val timeLeft = Duration.ofSeconds(
+                            (Duration.between(start, Instant.now()).toSecondsPart() * (1 / fraction - 1)).toLong()
+                        )
+                        System.out.printf(
+                            "Status:\t%.0f%%; Time left:\t%s\r",
+                            fraction * 100.0,
+                            timeLeft.printToString()
+                        )
+                    }
                 } else {
                     println("PSI isn't found")
                 }
             }
             val end = Instant.now()
             val timeSpent = Duration.between(start, end)
-            val minutes = timeSpent.toMinutes()
-            val seconds = timeSpent.toMillis() / 1000.0 - 60.0 * minutes
             System.out.printf(
-                "Done in %d min. %.1f s.\n",
-                minutes, seconds
+                "Done in %s\n",
+                timeSpent.printToString()
             )
         }
 
