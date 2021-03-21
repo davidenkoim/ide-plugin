@@ -79,7 +79,7 @@ class IdTransformerModel(pl.LightningModule):
             return ValueError(f"{self.tusk} tusk is not supported")
 
     def forward(self, usages, num_usages=None, beam_search=True, limit_num_usages=10, **kwargs):
-        inp = usages[:limit_num_usages].unsqueeze(0)
+        inp = usages[:limit_num_usages]
         with torch.no_grad():
             memory = self.encoder(inp, num_usages)
             if beam_search:

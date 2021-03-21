@@ -50,6 +50,7 @@ def evaluate():
         start = time.perf_counter()
         variable_features = request.get_json(force=True, cache=False)
         usages = variable_features["ngrams"]
+        usages = model.dm.dataset.input_from_usages(usages, device=DEVICE)
         predictions = model(usages)
         predictions = list(map(lambda prediction:
                                {
