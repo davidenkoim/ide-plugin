@@ -17,7 +17,7 @@ class PluginRunner : ApplicationStarter {
         "liferay-portal", "presto", "spring-framework", "wildfly"
     )
     private val javaSmallTest =
-        listOf("hadoop", "libgdx")
+        listOf("libgdx", "hadoop")
 //        listOf("TestProject")
 
     override fun getCommandName(): String = "modelsEvaluator"
