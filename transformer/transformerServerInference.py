@@ -1,12 +1,12 @@
 import json
+import logging
 import time
 import warnings
 from collections import namedtuple
 from os.path import join
 
 import torch
-from flask import Flask
-from flask import request
+from flask import Flask, request
 from flask_ngrok import run_with_ngrok
 from omegaconf import OmegaConf
 
@@ -14,6 +14,8 @@ from dataset.idDataModule import IdDataModule
 from model.idTransformerModel import IdTransformerModel
 
 app = Flask(__name__)
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 run_with_ngrok(app)
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print("Using device: ", DEVICE)
