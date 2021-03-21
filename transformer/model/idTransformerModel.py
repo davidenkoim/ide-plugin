@@ -81,7 +81,7 @@ class IdTransformerModel(pl.LightningModule):
     def forward(self, usages, num_usages=None, beam_search=True, limit_num_usages=10, **kwargs):
         inp = usages[:limit_num_usages]
         with torch.no_grad():
-            memory = self.encoder(inp, num_usages)
+            memory = self.encoder(inp.to(self.device), num_usages)
             if beam_search:
                 out = self.decoder.beam_search(memory, self.max_target_length,
                                                self.dm.target_init_idx,
