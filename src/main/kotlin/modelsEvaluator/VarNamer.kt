@@ -66,7 +66,7 @@ class VarNamer {
                     val fraction = ++progress / total.toDouble()
                     if (progress % (total / 100) == 0) {
                         val timeLeft = Duration.ofSeconds(
-                            (Duration.between(start, Instant.now()).toSecondsPart() * (1 / fraction - 1)).toLong()
+                            (Duration.between(start, Instant.now()).toSeconds() * (1 / fraction - 1)).toLong()
                         )
                         System.out.printf(
                             "Status:\t%.0f%%; Time left:\t%s\r",
