@@ -82,7 +82,7 @@ class VarNamer {
                         val timeSpent = Duration.between(start, Instant.now())
                         val timeLeft = Duration.ofSeconds((timeSpent.toSeconds() * (1 / fraction - 1)).toLong())
                         System.out.printf(
-                            "Status:\t%.0f%%; Time spent:\t%s; Time left:\t%s\r",
+                            "Status: %.0f%%;\tTime spent: %s;\tTime left: %s\r",
                             fraction * 100.0,
                             timeSpent.printToString(),
                             timeLeft.printToString()
