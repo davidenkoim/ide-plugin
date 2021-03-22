@@ -17,6 +17,8 @@ import com.jetbrains.rd.util.string.printToString
 import org.jetbrains.id.names.suggesting.VarNamePrediction
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
+import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor
+import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor
 import org.jetbrains.id.names.suggesting.dataset.DatasetManager
 import java.io.File
 import java.io.FileOutputStream
@@ -30,9 +32,21 @@ class VarNamer {
     companion object {
         private val LOG = logger<VarNamer>()
         private const val TRANSFORMER_SERVER_URL = "http://127.0.0.1:5000/"
-        fun predict(project: Project, dir: Path) {
+        private var ngramContributorType: Class<out NGramVariableNamesContributor>? = null
+            get() {
+                return if (field === null) {
+                    throw Exception("You have to set up ngramContributorType")
+                } else field
+            }
+
+        fun predict(project: Project, dir: Path, ngramContributorType: String) {
+            this.ngramContributorType = when (ngramContributorType) {
+                "global" -> GlobalVariableNamesContributor::class.java
+                "project" -> ProjectVariableNamesContributor::class.java
+                else -> throw NotImplementedError("ngramContributorType has to be \"global\" or \"project\"!")
+            }
             val mapper = ObjectMapper()
-            val predictionsFile: File = dir.resolve(project.name + "_predictions.txt").toFile()
+            val predictionsFile: File = dir.resolve("${project.name}_${ngramContributorType}_predictions.txt").toFile()
             predictionsFile.parentFile.mkdir()
             predictionsFile.createNewFile()
             val predictedFilePaths = predictionsFile.bufferedReader().lines().asSequence()
@@ -134,8 +148,12 @@ class VarNamer {
 
         private fun predictWithNGram(variable: PsiVariable): List<ModelPrediction> {
             val nameSuggestions: List<VarNamePrediction> = ArrayList()
-            val contributor = VariableNamesContributor.EP_NAME.findExtension(GlobalVariableNamesContributor::class.java)
-            contributor!!.contribute(variable, nameSuggestions, false)
+            val contributor = VariableNamesContributor.EP_NAME.findExtension(ngramContributorType!!)
+            contributor!!.contribute(
+                variable,
+                nameSuggestions,
+                ngramContributorType != GlobalVariableNamesContributor::class.java
+            )
             return nameSuggestions.map { x: VarNamePrediction -> ModelPrediction(x.name, x.probability) }
         }
 

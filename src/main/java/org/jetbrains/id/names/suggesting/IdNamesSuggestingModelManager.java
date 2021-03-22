@@ -12,8 +12,6 @@ import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContribu
 import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,7 +36,11 @@ public class IdNamesSuggestingModelManager {
     }
 
     public IdNamesSuggestingModelRunner getModelRunner(Class<? extends VariableNamesContributor> className, Project project) {
-        return myModelRunners.get(String.join("_", className.getName(), project.getLocationHash()));
+        IdNamesSuggestingModelRunner modelRunner = myModelRunners.get(String.join("_", className.getName(), project.getLocationHash()));
+        if (modelRunner != null){
+            return modelRunner;
+        }
+        return getModelRunner(className);
     }
 
     public void putModelRunner(Class<? extends VariableNamesContributor> className, Project project, IdNamesSuggestingModelRunner modelRunner) {
@@ -46,7 +48,7 @@ public class IdNamesSuggestingModelManager {
     }
 
     public void trainProjectNGramModel(@NotNull Project project, @Nullable ProgressIndicator progressIndicator) {
-        IdNamesNGramModelRunner modelRunner = new IdNamesNGramModelRunner(NGramVariableNamesContributor.SUPPORTED_TYPES, true);
+        IdNamesNGramModelRunner modelRunner = new IdNamesNGramModelRunner(NGramVariableNamesContributor.SUPPORTED_TYPES, false);
         modelRunner.learnProject(project, progressIndicator);
         putModelRunner(ProjectVariableNamesContributor.class, project, modelRunner);
     }

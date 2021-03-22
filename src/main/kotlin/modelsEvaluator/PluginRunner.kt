@@ -26,9 +26,9 @@ class PluginRunner : ApplicationStarter {
         try {
             val dataset = File(args[1])
             val saveDir = args[2]
-            trainNGramOn(dataset, javaSmallTrain)
-//            evaluateOn(dataset, javaSmallTrain, Paths.get(saveDir, "train"))
-            evaluateOn(dataset, javaSmallTest, Paths.get(saveDir, "test"))
+            val ngramContributorType = args[3]
+            if (ngramContributorType == "global") trainGlobalNGramModelOn(dataset, javaSmallTrain)
+            evaluateOn(dataset, javaSmallTest, Paths.get(saveDir, "test"), ngramContributorType)
         } catch (e: IllegalArgumentException) {
             e.printStackTrace()
         } catch (e: OutOfMemoryError) {
@@ -41,22 +41,18 @@ class PluginRunner : ApplicationStarter {
         }
     }
 
-    private fun trainNGramOn(dataset: File, projectList: List<String>) {
-        println("Training NGram global model...")
+    private fun trainGlobalNGramModelOn(dataset: File, projectList: List<String>) {
+        println("Training global NGram model...")
         var projectToClose: Project? = null
         val modelRunner = IdNamesSuggestingModelManager.getInstance()
             .getModelRunner(GlobalVariableNamesContributor::class.java) as IdNamesNGramModelRunner
-        val vocabulary = modelRunner.vocabulary
         for (projectDir in projectList) {
             val projectPath = dataset.resolve(projectDir)
             println("Opening project $projectDir...")
             val project = ProjectUtil.openOrImport(projectPath.path, projectToClose, true) ?: continue
 
-//            println("Loading global model...")
-//            (IdNamesSuggestingModelManager.getInstance()
-//                .getModelRunner(GlobalVariableNamesContributor::class.java) as IdNamesNGramModelRunner).load()
             IdNamesSuggestingModelManager.getInstance().trainGlobalNGramModel(project, null, false)
-            println("Vocabulary size: ${vocabulary.size()}")
+            println("Vocabulary size: ${modelRunner.vocabulary.size()}")
 
             projectToClose = project
         }
@@ -65,7 +61,12 @@ class PluginRunner : ApplicationStarter {
         }
     }
 
-    private fun evaluateOn(dataset: File, projectList: List<String>, dir: Path) {
+    private fun evaluateOn(
+        dataset: File,
+        projectList: List<String>,
+        dir: Path,
+        ngramContributorType: String
+    ) {
         println("Evaluating models...")
         var projectToClose: Project? = null
         for (projectDir in projectList) {
@@ -73,7 +74,10 @@ class PluginRunner : ApplicationStarter {
             println("Opening project $projectDir...")
             val project = ProjectUtil.openOrImport(projectPath.path, projectToClose, true) ?: continue
 
-            VarNamer.predict(project, dir)
+            if (ngramContributorType == "project") {
+                IdNamesSuggestingModelManager.getInstance().trainProjectNGramModel(project, null)
+            }
+            VarNamer.predict(project, dir, ngramContributorType)
 
             projectToClose = project
         }

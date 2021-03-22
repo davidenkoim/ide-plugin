@@ -141,7 +141,8 @@ tasks {
     runIde {
         val dataset: String? by project
         val saveDir: String? by project
-        args = listOfNotNull("modelsEvaluator", dataset, saveDir)
+        val ngramContributorType: String? by project
+        args = listOfNotNull("modelsEvaluator", dataset, saveDir, ngramContributorType)
         jvmArgs = listOf("-Djava.awt.headless=true")
         maxHeapSize = "8g"
     }
