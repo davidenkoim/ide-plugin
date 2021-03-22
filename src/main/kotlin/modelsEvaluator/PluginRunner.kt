@@ -52,7 +52,6 @@ class PluginRunner : ApplicationStarter {
             val project = ProjectUtil.openOrImport(projectPath.path, projectToClose, true) ?: continue
 
             IdNamesSuggestingModelManager.getInstance().trainGlobalNGramModel(project, null, false)
-            println("Vocabulary size: ${modelRunner.vocabulary.size()}")
 
             projectToClose = project
         }

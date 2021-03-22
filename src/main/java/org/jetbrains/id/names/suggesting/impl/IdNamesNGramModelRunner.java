@@ -57,7 +57,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     public int getModelPriority() {
-        return this.myVocabulary.size();
+        return myVocabulary.size();
     }
 
     /**
@@ -243,6 +243,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                         project.getName(),
                         delta.toMillis()));
         System.out.printf("Done in %s\n", delta.toString());
+        System.out.printf("Vocabulary size: %d", myVocabulary.size());
     }
 
     public void learnPsiFile(@NotNull PsiFile file) {
