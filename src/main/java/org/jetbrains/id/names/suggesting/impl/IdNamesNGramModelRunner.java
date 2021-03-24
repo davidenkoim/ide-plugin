@@ -227,7 +227,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         for (VirtualFile file : files) {
             ObjectUtils.consumeIfNotNull(PsiManager.getInstance(project).findFile(file), this::learnPsiFile);
             double fraction = ++progress / (double) total;
-            if (progress % (total / 10) == 0) {
+            if (total < 10 || progress % (total / 10) == 0) {
                 System.out.printf("Status:\t%.0f%%\r", fraction * 100.);
             }
             if (progressIndicator != null) {
@@ -243,7 +243,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                         project.getName(),
                         delta.toMillis()));
         System.out.printf("Done in %s\n", delta.toString());
-        System.out.printf("Vocabulary size: %d", myVocabulary.size());
+        System.out.printf("Vocabulary size: %d\n", myVocabulary.size());
     }
 
     public void learnPsiFile(@NotNull PsiFile file) {
