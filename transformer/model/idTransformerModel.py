@@ -120,7 +120,7 @@ class IdTransformerModel(pl.LightningModule):
         tgt, tgt_length = tgt
         memory = self.encoder(x, num_usages)
         out = self.decoder(memory, tgt, num_usages, tgt_length)
-        tgt_to_loss = torch.constant_pad_nd(tgt, (0, 0, 0, 1), self.dm.target_pad_idx)[..., 1:]  # BxT
+        tgt_to_loss = torch.constant_pad_nd(tgt, (0, 0, 0, 1), self.dm.target_pad_idx)[1:, ...]  # TxB
         # [[<s>], [<token>], [</s>], [<pad>]]] -> [[<token>], [</s>], [<pad>], [<pad>]]
         out_to_loss = out.transpose(1, 2)  # TxBxV -> TxVxB
         return self.loss(out_to_loss, tgt_to_loss), out, tgt
