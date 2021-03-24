@@ -31,6 +31,7 @@ class IdTransformerModel(pl.LightningModule):
         self.num_decoder_layers = cfg.num_decoder_layers
         self.num_usage_layers = cfg.num_usage_layers
         self.dropout = cfg.dropout
+        self.sequence_reducer = cfg.sequence_reducer
         self.sequence_encoder_type = cfg.sequence_encoder_type
 
         self.batch_size = cfg.batch_size
@@ -46,7 +47,8 @@ class IdTransformerModel(pl.LightningModule):
                                  self.num_encoder_layers,
                                  self.num_usage_layers,
                                  self.dropout,
-                                 self.sequence_encoder_type)
+                                 self.sequence_encoder_type,
+                                 self.sequence_reducer)
         self.decoder = IdDecoder(self.max_num_usages,
                                  self.max_target_length,
                                  self.dm.target_vocab_size,

@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
@@ -17,7 +18,8 @@ class IdEncoder(nn.Module):
                  num_layers,
                  num_usage_layers=1,
                  dropout=0.1,
-                 sequence_encoder_type='vanilla'):
+                 sequence_encoder_type='vanilla',
+                 sequence_reducer="fc"):
         """
         Encodes sequence of usages to unconditioned vectors.
 
@@ -31,7 +33,8 @@ class IdEncoder(nn.Module):
         :param num_layers: the number of sub-encoder-layers in the sequenceEncoder,
         :param num_usage_layers: the number of sub-encoder-layers in the usageEncoder,
         :param dropout: the dropout value,
-        :param sequence_encoder_type: 'vanilla' or 'transformer'.
+        :param sequence_encoder_type: 'vanilla' or 'transformer',
+        :param sequence_reducer: how to reduce token embeddings to usage embedding ("fc", "sum", "mean").
         """
         super(IdEncoder, self).__init__()
         if sequence_encoder_type == 'transformer':
@@ -42,6 +45,7 @@ class IdEncoder(nn.Module):
                                                     num_heads=num_heads,
                                                     hidden_dim=hidden_dim,
                                                     num_layers=num_layers,
+                                                    sequence_reducer=sequence_reducer,
                                                     dropout=dropout)
         elif sequence_encoder_type == 'vanilla':
             self.sequence_encoder = VanillaSequenceEncoder(vocab_size=vocab_size,
@@ -79,6 +83,7 @@ class SequenceEncoder(nn.Module):
                  num_heads,
                  hidden_dim,
                  num_layers,
+                 sequence_reducer="fc",
                  dropout=0.1):
         """
         Encodes ngram sequences of usages to vectors.
@@ -90,6 +95,7 @@ class SequenceEncoder(nn.Module):
         :param num_heads: the number of heads in multiHeadAttention,
         :param hidden_dim: the dimension of the feedforward network after multiHeadAttention,
         :param num_layers: the number of sub-encoder-layers,
+        :param sequence_reducer: how to reduce token embeddings to usage embedding ("fc", "sum", "mean")
         :param dropout: the dropout value.
         """
         super(SequenceEncoder, self).__init__()
@@ -98,7 +104,11 @@ class SequenceEncoder(nn.Module):
         self.positional_encoder = PositionalEncoding(embedding_dim, dropout)
         encoder_layer = TransformerEncoderLayer(embedding_dim, num_heads, hidden_dim, dropout)
         self.encoder = TransformerEncoder(encoder_layer, num_layers)
-        self.fc = nn.Linear(hidden_dim * max_sequence_length, hidden_dim)
+        self.sequence_reducer = sequence_reducer
+        if sequence_reducer == "fc":
+            self.fc = nn.Linear(hidden_dim * max_sequence_length, hidden_dim)
+        else:
+            self.reduce_fn = getattr(torch, sequence_reducer)
 
     def forward(self, x):  # UxBxL
         """
@@ -114,8 +124,11 @@ class SequenceEncoder(nn.Module):
         t = self.positional_encoder(t)
         t = self.encoder(t, src_key_padding_mask=mask)  # LxUBxE -> LxUBxH unconditioned sequence
         h = t.shape[-1]
-        t = t.transpose(0, 1).contiguous().view(u * b, l * h)  # LxUBxH -> UBxLH
-        t = self.fc(t)  # UBxLH -> UBxH
+        if self.sequence_reducer == "fc":
+            t = t.transpose(0, 1).contiguous().view(u * b, l * h)  # LxUBxH -> UBxLH
+            t = self.fc(t)  # UBxLH -> UBxH
+        else:
+            t = self.reduce_fn(t, dim=0)  # LxUBxH -> UBxH
         return t.view(u, b, h)  # UBxH -> UxBxH
 
 
