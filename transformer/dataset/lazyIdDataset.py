@@ -29,8 +29,9 @@ class LazyIdDataset(BaseIdDataset):
 
 
 class LazyReader:
-    """Uses caching and, hence, lots of RAM (crashes in Google Colab)"""
-    def __init__(self, data_path, example_fields):
+    """Uses caching and, hence, lots of RAM"""
+
+    def __init__(self, data_path, example_fields=None):
         if not exists(data_path):
             raise FileNotFoundError(f"File {data_path} is not found")
         self.data_path = data_path
@@ -41,6 +42,8 @@ class LazyReader:
 
     def __getitem__(self, index):
         line = self._read_line(index)
+        if self.example_fields is None:
+            return line
         try:
             ex = Example.fromJSON(line, self.example_fields)
             if not ex.target:
