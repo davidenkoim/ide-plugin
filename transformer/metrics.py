@@ -13,13 +13,13 @@ class ClassificationMetric(Metric):
 
     def update(self, predictions, target):
         """
-        :param predictions: BxTxV
-        :param target: BxT
+        :param predictions: TxBxV
+        :param target: TxB
         :return:
         """
         assert predictions.shape[:2] == target.shape[:2]
-        tgts = target[:, 1:2]  # BxT -> Bx1
-        preds = torch.argsort(predictions[:, 0, :], dim=-1, descending=True)[:, :10]  # BxTxV -> BxN
+        tgts = target[1].unsqueeze(1)  # TxB -> Bx1
+        preds = torch.argsort(predictions[0, :, :], dim=-1, descending=True)[:, :10]  # TxBxV -> BxN
 
         ranks = torch.nonzero(torch.eq(preds, tgts))[:, 1]
         self.correct += torch.sum(self.analyze_ranks(ranks))
@@ -58,13 +58,13 @@ class GenerationMetric(Metric):
 
     def update(self, predictions, target):
         """
-        :param predictions: BxTxV
-        :param target: BxT
+        :param predictions: TxBxV
+        :param target: TxB
         :return:
         """
         assert predictions.shape[:2] == target.shape[:2]
-        preds = torch.argmax(predictions, dim=-1)[:, :-1]  # BxTxV -> Bx(T-1)
-        tgts = target[:, 1:]  # BxT -> Bx(T-1)
+        preds = torch.argmax(predictions[:-1], dim=-1).transpose(0, 1)  # TxBxV -> Bx(T-1)
+        tgts = target[1:].transpose(0, 1)  # TxB -> Bx(T-1)
 
         for pred, tgt in zip(preds, tgts):
             for pred_subtoken in filter(lambda x: x not in self.ignore_idxs, pred):
@@ -112,13 +112,13 @@ class Accuracy(Metric):
 
     def update(self, predictions, target):
         """
-        :param predictions: BxTxV
-        :param target: BxT
+        :param predictions: TxBxV
+        :param target: TxB
         :return:
         """
         assert predictions.shape[:2] == target.shape[:2]
-        preds = torch.argmax(predictions[:, :-1, :], dim=-1)  # BxTxV -> Bx(T-1)
-        tgts = target[:, 1:]  # BxT -> Bx(T-1)
+        preds = torch.argmax(predictions[:-1], dim=-1).transpose(0, 1)  # TxBxV -> Bx(T-1)
+        tgts = target[1:].transpose(0, 1)  # TxB -> Bx(T-1)
 
         self.correct += torch.sum(torch.eq(preds, tgts).all(dim=1))
         self.total += tgts.shape[0]
