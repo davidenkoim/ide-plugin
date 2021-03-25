@@ -19,7 +19,7 @@ class ClassificationMetric(Metric):
         """
         assert predictions.shape[:2] == target.shape[:2]
         tgts = target[1].unsqueeze(1)  # TxB -> Bx1
-        preds = torch.argsort(predictions[0, :, :], dim=-1, descending=True)[:, :10]  # TxBxV -> BxN
+        preds = torch.topk(predictions[0, :, :], k=10, dim=-1).indices  # TxBxV -> Bx10
 
         ranks = torch.nonzero(torch.eq(preds, tgts))[:, 1]
         self.correct += torch.sum(self.analyze_ranks(ranks))
