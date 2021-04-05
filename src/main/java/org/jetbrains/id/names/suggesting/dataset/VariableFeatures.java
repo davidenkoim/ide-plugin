@@ -10,7 +10,7 @@ import java.util.List;
 
 public class VariableFeatures implements Serializable {
     public final String variable;
-    public final List<String> ngrams = new ArrayList<>();
+    public final List<Object> ngrams = new ArrayList<>();
     public final List<Object> otherFeatures = new ArrayList<>();
     public String psiInterface = null;
 
@@ -33,10 +33,10 @@ public class VariableFeatures implements Serializable {
 }
 
 class UsageFeatures implements Serializable{
-    public final String ngram;
+    public final Object ngram;
     public final HashMap<String, Integer> otherFeatures = new LinkedHashMap<>();
 
-    public UsageFeatures(String ngram, int distanceToDeclaration){
+    public UsageFeatures(Object ngram, int distanceToDeclaration) {
         this.ngram = ngram;
         this.otherFeatures.put("distanceToDeclaration", distanceToDeclaration);
     }

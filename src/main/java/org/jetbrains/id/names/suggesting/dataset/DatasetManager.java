@@ -40,19 +40,23 @@ public class DatasetManager {
     public static final List<String> IntegersToLeave = Arrays.asList("0", "1", "32", "64");
     public static int NGramLengthBeforeUsage = 20;
     public static int NGramLengthAfterUsage = 20;
-    private static final Path DatasetDir = Paths.get(PathManager.getSystemPath(), "dataset");
+    private static final Path datasetDir = Paths.get(PathManager.getSystemPath(), "dataset");
 
-    public static void build(@NotNull Project project) {
-        build(project, null);
+    public static void build(@NotNull Project project, @Nullable Path saveDir) {
+        build(project, saveDir, null);
     }
 
     public static void build(@NotNull Project project, @Nullable ProgressIndicator progressIndicator) {
+        build(project, null, progressIndicator);
+    }
+
+    public static void build(@NotNull Project project, @Nullable Path saveDir, @Nullable ProgressIndicator progressIndicator) {
         Collection<VirtualFile> files = FileTypeIndex.getFiles(JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project));
         HashMap<String, List<VariableFeatures>> dataset = new HashMap<>();
         HashMap<String, Object> fileStats = new HashMap<>();
-        double progress = 0;
-        final double total = files.size();
+        int progress = 0;
+        final int total = files.size();
         Instant start = Instant.now();
         @NotNull PsiManager psiManager = PsiManager.getInstance(project);
         System.out.printf("Number of files to parse: %s\n", files.size());
@@ -62,18 +66,27 @@ public class DatasetManager {
                 @NotNull String filePath = file.getPath();
                 dataset.put(filePath, DatasetManager.parsePsiFile(psiFile));
                 fileStats.put(filePath, psiFile.getTextLength());
-                double timeLeft = Duration.between(start, Instant.now()).toMillis() * (total / ++progress - 1) / 1000.;
+                double fraction = ++progress / (double) total;
+                if (total < 100 || progress % (total / 100) == 0) {
+                    Duration timeSpent = Duration.between(start, Instant.now());
+                    Duration timeLeft = Duration.ofMillis((long) (timeSpent.toMillis() * (1 / fraction - 1)));
+                    System.out.printf(
+                            "Status: %.0f%%;\tTime spent: %s;\tTime left: %s\r",
+                            fraction * 100.0,
+                            timeSpent.toString(),
+                            timeLeft.toString()
+                    );
+                }
                 if (progressIndicator != null) {
                     progressIndicator.setIndeterminate(false);
                     progressIndicator.setText2(file.getPath());
-                    progressIndicator.setFraction(progress / total);
+                    progressIndicator.setFraction(progress / (double) total);
                 }
-                System.out.printf("Status:\t%.2f%%; Time left:\t%.1f s.\r", progress / total * 100., timeLeft);
             } else {
                 System.out.println("PSI isn't found");
             }
         }
-        save(project, dataset, fileStats);
+        save(saveDir == null ? datasetDir : saveDir, project, dataset, fileStats);
         Instant end = Instant.now();
         Duration timeSpent = Duration.between(start, end);
         long minutes = timeSpent.toMinutes();
@@ -185,15 +198,15 @@ public class DatasetManager {
         return false;
     }
 
-    private static void save(@NotNull Project project, @NotNull HashMap<String, List<VariableFeatures>> dataset) {
-        save(project, dataset, null);
+    private static void save(@NotNull Path saveDir, @NotNull Project project, @NotNull HashMap<String, List<VariableFeatures>> dataset) {
+        save(saveDir, project, dataset, null);
     }
 
-    private static void save(@NotNull Project project, @NotNull HashMap<String, List<VariableFeatures>> dataset, @Nullable HashMap<String, Object> fileStats) {
-        File datasetFile = DatasetDir.resolve(project.getName() + "_dataset.json").toFile();
-        File statsFile = DatasetDir.resolve(project.getName() + "_stats.json").toFile();
+    private static void save(@NotNull Path saveDir, @NotNull Project project, @NotNull HashMap<String, List<VariableFeatures>> dataset, @Nullable HashMap<String, Object> fileStats) {
+        File datasetFile = saveDir.resolve(project.getName() + "_dataset.json").toFile();
+        File statsFile = saveDir.resolve(project.getName() + "_stats.json").toFile();
         try {
-            datasetFile.getParentFile().mkdir();
+            datasetFile.getParentFile().mkdirs();
             datasetFile.createNewFile();
             ObjectMapper mapper = new ObjectMapper();
             mapper.writeValue(datasetFile, dataset);
