@@ -130,22 +130,23 @@ tasks {
     }
 
 //    varMiner part
-//    runIde {
-//        val dataset: String? by project
-//        args = listOfNotNull("varMiner", dataset)
-//        jvmArgs = listOf("-Djava.awt.headless=true")
-//        maxHeapSize = "8g"
-//    }
-
-//    modelsEvaluator part
     runIde {
         val dataset: String? by project
         val saveDir: String? by project
-        val ngramContributorType: String? by project
-        args = listOfNotNull("modelsEvaluator", dataset, saveDir, ngramContributorType)
+        args = listOfNotNull("varMiner", dataset, saveDir)
         jvmArgs = listOf("-Djava.awt.headless=true")
         maxHeapSize = "8g"
     }
+
+//    modelsEvaluator part
+//    runIde {
+//        val dataset: String? by project
+//        val saveDir: String? by project
+//        val ngramContributorType: String? by project
+//        args = listOfNotNull("modelsEvaluator", dataset, saveDir, ngramContributorType)
+//        jvmArgs = listOf("-Djava.awt.headless=true")
+//        maxHeapSize = "8g"
+//    }
 
 
     register("generateUpdatePluginsXML") {

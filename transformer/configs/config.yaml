@@ -1,5 +1,0 @@
-defaults:
-  - model: transformer_encoder
-  - dataset: java-small
-
-show_in_wandb: False
