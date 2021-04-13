@@ -1,4 +1,4 @@
-package org.jetbrains.id.names.suggesting.dataset;
+package tools.varMiner;
 
 import com.intellij.ide.highlighter.JavaFileType;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -29,7 +29,7 @@ public class DatasetBuildAction extends AnAction {
                     progressIndicator.setText(IdNamesSuggestingBundle.message("building.dataset.for.project", project.getName()));
                     ReadAction.nonBlocking(() -> {
                         Instant start = Instant.now();
-                        DatasetManager.build(project, progressIndicator);
+                        DatasetExtractor.build(project, progressIndicator);
                         Instant end = Instant.now();
                         NotificationsUtil.notify(project,
                                 "Building dataset is completed.",

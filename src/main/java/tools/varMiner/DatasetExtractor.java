@@ -1,4 +1,4 @@
-package org.jetbrains.id.names.suggesting.dataset;
+package tools.varMiner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
@@ -11,11 +11,9 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.search.searches.ReferencesSearch;
-import com.intellij.util.ObjectUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
+import org.jetbrains.id.names.suggesting.PsiUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,14 +28,11 @@ import java.util.stream.Stream;
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
 import static java.lang.Math.abs;
+import static org.jetbrains.id.names.suggesting.PsiUtils.findReferences;
+import static org.jetbrains.id.names.suggesting.PsiUtils.processToken;
 
-public class DatasetManager {
+public class DatasetExtractor {
     public static final String TOKEN_DELIMITER = "\u2581";
-    public static final String STRING_TOKEN = "<str>";
-    public static final String NUMBER_TOKEN = "<num>";
-    public static final String VARIABLE_TOKEN = "<var>";
-    public static final List<String> NumberTypes = Arrays.asList("INTEGER_LITERAL", "LONG_LITERAL", "FLOAT_LITERAL", "DOUBLE_LITERAL");
-    public static final List<String> IntegersToLeave = Arrays.asList("0", "1", "32", "64");
     public static int NGramLengthBeforeUsage = 20;
     public static int NGramLengthAfterUsage = 20;
     private static final Path datasetDir = Paths.get(PathManager.getSystemPath(), "dataset");
@@ -64,7 +59,7 @@ public class DatasetManager {
             @Nullable PsiFile psiFile = psiManager.findFile(file);
             if (psiFile != null) {
                 @NotNull String filePath = file.getPath();
-                dataset.put(filePath, DatasetManager.parsePsiFile(psiFile));
+                dataset.put(filePath, DatasetExtractor.parsePsiFile(psiFile));
                 fileStats.put(filePath, psiFile.getTextLength());
                 double fraction = ++progress / (double) total;
                 if (total < 100 || progress % (total / 100) == 0) {
@@ -111,7 +106,7 @@ public class DatasetManager {
         Stream<PsiReference> elementUsages = findReferences(variable, file);
         return new VariableFeatures(variable,
                 Stream.concat(Stream.of(variable), elementUsages)
-                        .map(DatasetManager::getIdentifier)
+                        .map(PsiUtils::getIdentifier)
                         .filter(Objects::nonNull)
                         .sorted(Comparator.comparing(PsiElement::getTextOffset))
                         .map(id -> getUsageFeatures(variable, id, file))
@@ -127,7 +122,7 @@ public class DatasetManager {
                 .withRoot(file)
                 .onRange(new TextRange(0, max(0, element.getTextOffset() - 1)))
                 .forceIgnore(node -> node instanceof PsiComment)
-                .filter(IdNamesNGramModelRunner::shouldLex)) {
+                .filter(PsiUtils::shouldLex)) {
             tokens.add(processToken(token, variable));
             if (--order < 1) {
                 break;
@@ -141,61 +136,16 @@ public class DatasetManager {
                 .withRoot(file)
                 .onRange(new TextRange(min(element.getTextOffset(), file.getTextLength()), file.getTextLength()))
                 .forceIgnore(node -> node instanceof PsiComment)
-                .filter(IdNamesNGramModelRunner::shouldLex)) {
+                .filter(PsiUtils::shouldLex)) {
             tokens.add(processToken(token, variable));
             if (--order < 1) {
                 break;
             }
         }
         return new UsageFeatures(
-                String.join(DatasetManager.TOKEN_DELIMITER, tokens),
+                String.join(DatasetExtractor.TOKEN_DELIMITER, tokens),
                 abs(variable.getTextOffset() - element.getTextOffset())
         );
-    }
-
-    private static String processToken(@NotNull PsiElement token, @NotNull PsiVariable variable) {
-        String text = token.getText();
-        if (token.getParent() instanceof PsiLiteral) {
-            String literalType = ((PsiJavaToken) token).getTokenType().toString();
-            if (literalType.equals("STRING_LITERAL")) {
-                return text.length() > 10 ? STRING_TOKEN : text;
-            }
-            if (NumberTypes.contains(literalType)) {
-                return IntegersToLeave.contains(text) ? text : NUMBER_TOKEN;
-            }
-        } else if (isVariableOrReference(variable, token)) {
-            return VARIABLE_TOKEN;
-        }
-        return text;
-    }
-
-
-    public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner, @NotNull PsiFile file) {
-//        Unknown problems when using GlobalSearchScope.projectScope. Most likely there are too many fields and searching breaks.
-        return ReferencesSearch.search(identifierOwner, GlobalSearchScope.fileScope(file))
-                .findAll()
-                .stream();
-    }
-
-    private static @Nullable PsiIdentifier getIdentifier(Object element) {
-        if (element instanceof PsiNameIdentifierOwner) {
-            element = ((PsiNameIdentifierOwner) element).getNameIdentifier();
-        } else if (element instanceof PsiReferenceExpression) {
-            element = ((PsiReferenceExpression) element).getReferenceNameElement();
-        }
-        return ObjectUtils.tryCast(element, PsiIdentifier.class);
-    }
-
-    private static boolean isVariableOrReference(@NotNull PsiVariable variable, @Nullable PsiElement token) {
-        if (token instanceof PsiIdentifier) {
-            PsiElement parent = token.getParent();
-            if (parent instanceof PsiReference) {
-                return PsiManager.getInstance(variable.getProject()).areElementsEquivalent(variable, ((PsiReference) parent).resolve());
-            } else {
-                return PsiManager.getInstance(variable.getProject()).areElementsEquivalent(variable, parent);
-            }
-        }
-        return false;
     }
 
     private static void save(@NotNull Path saveDir, @NotNull Project project, @NotNull HashMap<String, List<VariableFeatures>> dataset) {

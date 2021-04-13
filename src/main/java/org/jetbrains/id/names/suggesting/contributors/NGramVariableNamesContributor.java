@@ -3,12 +3,10 @@ package org.jetbrains.id.names.suggesting.contributors;
 import com.google.common.collect.Lists;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
-import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.search.searches.ReferencesSearch;
-import com.intellij.util.ObjectUtils;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.id.names.suggesting.PsiUtils;
 import org.jetbrains.id.names.suggesting.VarNamePrediction;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
@@ -21,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.max;
+import static org.jetbrains.id.names.suggesting.PsiUtils.findReferences;
 
 public abstract class NGramVariableNamesContributor implements VariableNamesContributor {
     public static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
@@ -59,28 +58,13 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
     }
 
     private List<List<String>> findUsageNGrams(PsiNameIdentifierOwner identifierOwner) {
-        Stream<PsiReference> elementUsages = findReferences(identifierOwner);
+        Stream<PsiReference> elementUsages = findReferences(identifierOwner, identifierOwner.getContainingFile());
         return Stream.concat(Stream.of(identifierOwner), elementUsages)
-                .map(NGramVariableNamesContributor::getIdentifier)
+                .map(PsiUtils::getIdentifier)
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(PsiElement::getTextOffset))
                 .map(this::getNGram)
                 .collect(Collectors.toList());
-    }
-
-    public static Stream<PsiReference> findReferences(@NotNull PsiNameIdentifierOwner identifierOwner) {
-        return ReferencesSearch.search(identifierOwner, GlobalSearchScope.fileScope(identifierOwner.getContainingFile()))
-                .findAll()
-                .stream();
-    }
-
-    private static @Nullable PsiIdentifier getIdentifier(Object element) {
-        if (element instanceof PsiNameIdentifierOwner) {
-            element = ((PsiNameIdentifierOwner) element).getNameIdentifier();
-        } else if (element instanceof PsiReferenceExpression) {
-            element = ((PsiReferenceExpression) element).getReferenceNameElement();
-        }
-        return ObjectUtils.tryCast(element, PsiIdentifier.class);
     }
 
     private List<String> getNGram(@NotNull PsiElement element) {
@@ -91,7 +75,7 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
                 .withRoot(element.getContainingFile())
                 .onRange(new TextRange(0, max(0, element.getTextOffset())))
                 .forceIgnore(node -> node instanceof PsiComment)
-                .filter(IdNamesNGramModelRunner::shouldLex)) {
+                .filter(PsiUtils::shouldLex)) {
             tokens.add(token.getText());
             if (--order < 1) {
                 break;

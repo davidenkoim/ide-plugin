@@ -1,4 +1,4 @@
-package modelsEvaluator
+package tools.modelsEvaluator
 
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationStarter

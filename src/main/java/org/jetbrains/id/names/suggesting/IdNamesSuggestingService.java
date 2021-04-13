@@ -2,12 +2,8 @@ package org.jetbrains.id.names.suggesting;
 
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiVariable;
-import com.intellij.refactoring.rename.JavaUnresolvableLocalCollisionDetector;
-import com.intellij.usageView.UsageInfo;
-import com.intellij.util.SmartList;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
@@ -17,6 +13,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.jetbrains.id.names.suggesting.PsiUtils.isColliding;
 
 public class IdNamesSuggestingService {
     public static final int PREDICTION_CUTOFF = 10;
@@ -109,18 +107,5 @@ public class IdNamesSuggestingService {
                             throw new IllegalStateException();
                         },
                         LinkedHashMap::new));
-    }
-
-    /**
-     * Checks if there is variables with newName in the scope.
-     *
-     * @param element element for which we suggest newName.
-     * @param newName new name of the {@param element}.
-     * @return if there are collisions.
-     */
-    private static boolean isColliding(@NotNull PsiElement element, @NotNull String newName) {
-        List<UsageInfo> info = new SmartList<>();
-        JavaUnresolvableLocalCollisionDetector.findCollisions(element, newName, info);
-        return !info.isEmpty();
     }
 }

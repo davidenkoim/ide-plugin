@@ -1,4 +1,4 @@
-package modelsEvaluator
+package tools.modelsEvaluator
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -19,13 +19,12 @@ import org.jetbrains.id.names.suggesting.api.VariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor
-import org.jetbrains.id.names.suggesting.dataset.DatasetManager
+import tools.varMiner.DatasetExtractor
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
-import java.util.*
 import kotlin.streams.asSequence
 
 class VarNamer {
@@ -158,7 +157,7 @@ class VarNamer {
         }
 
         private fun predictWithTransformer(variable: PsiVariable): Any {
-            val variableFeatures = DatasetManager.getVariableFeatures(variable, variable.containingFile)
+            val variableFeatures = DatasetExtractor.getVariableFeatures(variable, variable.containingFile)
             return HttpRequests.post(TRANSFORMER_SERVER_URL, HttpRequests.JSON_CONTENT_TYPE)
                 .connect(HttpRequests.RequestProcessor {
                     val objectMapper = ObjectMapper()

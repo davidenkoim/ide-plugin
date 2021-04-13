@@ -17,7 +17,6 @@ import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.ObjectUtils;
 import kotlin.Pair;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.id.names.suggesting.*;
@@ -255,7 +254,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .withRoot(file)
                 .onRange(new TextRange(0, 64 * 1024)) // first 128 KB of chars
                 .forceIgnore(node -> node instanceof PsiComment)
-                .filter(IdNamesNGramModelRunner::shouldLex)
+                .filter(PsiUtils::shouldLex)
                 .toList()
                 .stream()
                 .peek(this::rememberIdName)
@@ -271,11 +270,6 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 myRememberedIdentifiers.get(parentClass).add(myVocabulary.toIndex(element.getText()));
             }
         }
-    }
-
-    public static boolean shouldLex(@NotNull PsiElement element) {
-        return element.getFirstChild() == null // is leaf
-                && !StringUtils.isBlank(element.getText());
     }
 
     private double toProb(@NotNull Pair<Double, Double> probConf) {

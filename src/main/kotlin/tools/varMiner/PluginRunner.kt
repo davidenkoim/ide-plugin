@@ -1,9 +1,8 @@
-package varMiner
+package tools.varMiner
 
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationStarter
 import com.intellij.openapi.project.Project
-import org.jetbrains.id.names.suggesting.dataset.DatasetManager
 import java.io.File
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -29,7 +28,7 @@ class PluginRunner : ApplicationStarter {
                 val project = ProjectUtil.openOrImport(projectPath.path, projectToClose, true) ?: continue
                 println("Project is opened.")
 
-                DatasetManager.build(project, saveDir)
+                DatasetExtractor.build(project, saveDir)
 
                 println("Dataset for $projectDir is built.")
                 projectToClose = project

@@ -1,4 +1,4 @@
-package org.jetbrains.id.names.suggesting.dataset;
+package tools.varMiner;
 
 import com.intellij.psi.PsiVariable;
 
