@@ -94,8 +94,8 @@ public class PsiUtils {
     }
 
     public static @Nullable PsiElement resolveReference(@NotNull PsiReference reference) {
-        System.out.printf("Resolving reference: %s...\r", reference.toString().replace("\n", ""));
-        return runForSomeTime(reference::resolve, 50);
+//        System.out.printf("Resolving reference: %s...\r", reference.toString().replace("\n", ""));
+        return runForSomeTime(reference::resolve, 1000);
     }
 
     public static <T> @Nullable T runForSomeTime(@NotNull Computable<T> process, long runningTime) {
@@ -123,10 +123,11 @@ public class PsiUtils {
                         }
                     });
         } catch (ProcessCanceledException e) {
-            System.out.println();
-            System.out.println("Canceled");
+//            System.out.println();
+//            System.out.println("Canceled");
             return null;
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }

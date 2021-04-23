@@ -48,7 +48,7 @@ public class IdNamesSuggestingModelManager {
     }
 
     public void trainProjectNGramModel(@NotNull Project project, @Nullable ProgressIndicator progressIndicator) {
-        IdNamesNGramModelRunner modelRunner = new IdNamesNGramModelRunner(NGramVariableNamesContributor.SUPPORTED_TYPES, false);
+        IdNamesNGramModelRunner modelRunner = new IdNamesNGramModelRunner(NGramVariableNamesContributor.SUPPORTED_TYPES, true);
         modelRunner.learnProject(project, progressIndicator);
         putModelRunner(ProjectVariableNamesContributor.class, project, modelRunner);
     }
