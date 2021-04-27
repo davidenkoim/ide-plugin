@@ -22,6 +22,7 @@
         <!-- Headless running part-->
         <appStarter implementation="tools.graphVarMiner.PluginRunner"/>
         <appStarter implementation="tools.varMiner.PluginRunner"/>
+        <appStarter implementation="tools.graphModelsEvaluator.PluginRunner"/>
         <appStarter implementation="tools.modelsEvaluator.PluginRunner"/>
         <!-- End of headless running part-->
         <intentionAction>
