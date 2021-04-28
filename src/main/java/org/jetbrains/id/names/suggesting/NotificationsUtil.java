@@ -15,7 +15,7 @@ public class NotificationsUtil {
      * @param context
      */
     public static void notify(Project project, String title, String context) {
-        if (Registry.get("developer.mode").asBoolean()) {
+        if (isDeveloperMode()) {
             Notifications.Bus.notify(
                     new Notification(IdNamesSuggestingBundle.message("name"),
                             title,
@@ -23,5 +23,9 @@ public class NotificationsUtil {
                             NotificationType.INFORMATION),
                     project);
         }
+    }
+
+    public static boolean isDeveloperMode(){
+        return Registry.get("developer.mode").asBoolean();
     }
 }

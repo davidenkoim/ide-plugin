@@ -17,18 +17,16 @@ import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.ObjectUtils;
 import kotlin.Pair;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
-import org.jetbrains.id.names.suggesting.IdNamesSuggestingService;
-import org.jetbrains.id.names.suggesting.Prediction;
-import org.jetbrains.id.names.suggesting.VocabularyManager;
+import org.jetbrains.id.names.suggesting.*;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
 
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -42,6 +40,10 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     private final NGramModel myModel;
     private Vocabulary myVocabulary = new Vocabulary();
 
+    public Vocabulary getVocabulary() {
+        return myVocabulary;
+    }
+
     public IdNamesNGramModelRunner(List<Class<? extends PsiNameIdentifierOwner>> supportedTypes, boolean isLargeCorpora) {
         myModel = new JMModel(6, 0.5, isLargeCorpora ? new GigaCounter() : new ArrayTrieCounter());
         this.setSupportedTypes(supportedTypes);
@@ -54,7 +56,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     }
 
     public int getModelPriority() {
-        return this.myVocabulary.size();
+        return myVocabulary.size();
     }
 
     /**
@@ -65,15 +67,19 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
      * @return List of predictions.
      */
     @Override
-    public List<Prediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams) {
+    public List<VarNamePrediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams, boolean forgetUsages) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
-        allUsageNGramIndices.forEach(this::forgetUsage);
-        List<Prediction> predictionList = new ArrayList<>();
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::forgetUsage);
+        }
+        List<VarNamePrediction> predictionList = new ArrayList<>();
         int usagePrioritiesSum = 0;
         for (List<Integer> usageNGramIndices : allUsageNGramIndices) {
             usagePrioritiesSum += predictUsageName(predictionList, usageNGramIndices, getIdTypeFilter(identifierClass));
         }
-        allUsageNGramIndices.forEach(this::learnUsage);
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::learnUsage);
+        }
         return rankUsagePredictions(predictionList, usagePrioritiesSum);
     }
 
@@ -87,9 +93,11 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
      * @return pair of probability and model priority.
      */
     @Override
-    public Pair<Double, Integer> getProbability(List<List<String>> usageNGrams) {
+    public Pair<Double, Integer> getProbability(List<List<String>> usageNGrams, boolean forgetUsages) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
-        allUsageNGramIndices.forEach(this::forgetUsage);
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::forgetUsage);
+        }
         double probability = 0.0;
         int usagePrioritiesSum = 0;
         for (List<Integer> usageNGramIndices : allUsageNGramIndices) {
@@ -97,13 +105,15 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
             probability += probPriority.getFirst() * probPriority.getSecond();
             usagePrioritiesSum += probPriority.getSecond();
         }
-        allUsageNGramIndices.forEach(this::learnUsage);
+        if (forgetUsages) {
+            allUsageNGramIndices.forEach(this::learnUsage);
+        }
         return new Pair<>(probability / usagePrioritiesSum, getModelPriority());
     }
 
-    private List<Prediction> rankUsagePredictions(List<Prediction> predictionList, int usagePrioritiesSum) {
+    private List<VarNamePrediction> rankUsagePredictions(List<VarNamePrediction> predictionList, int usagePrioritiesSum) {
         Map<String, Double> rankedPredictions = new HashMap<>();
-        for (Prediction prediction : predictionList) {
+        for (VarNamePrediction prediction : predictionList) {
             Double prob = rankedPredictions.get(prediction.getName());
             double addition = prediction.getProbability() * prediction.getPriority() / usagePrioritiesSum;
             if (prob == null) { // If see this prediction for the first time just put it in the map
@@ -116,7 +126,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .stream()
                 .sorted((e1, e2) -> -Double.compare(e1.getValue(), e2.getValue()))
                 .limit(IdNamesSuggestingService.PREDICTION_CUTOFF)
-                .map(e -> new Prediction(e.getKey(), e.getValue(), getModelPriority()))
+                .map(e -> new VarNamePrediction(e.getKey(), e.getValue(), getModelPriority()))
                 .collect(Collectors.toList());
     }
 
@@ -124,7 +134,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return usageNGrams.stream().map(myVocabulary::toIndices).collect(Collectors.toList());
     }
 
-    private int predictUsageName(@NotNull List<Prediction> predictionList,
+    private int predictUsageName(@NotNull List<VarNamePrediction> predictionList,
                                  @NotNull List<Integer> usageNGramIndices,
                                  @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
         int usagePriority = getUsagePriority(usageNGramIndices);
@@ -132,7 +142,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 .entrySet()
                 .stream()
                 .filter(idTypeFilter)
-                .map(e -> new Prediction(myVocabulary.toWord(e.getKey()),
+                .map(e -> new VarNamePrediction(myVocabulary.toWord(e.getKey()),
                         toProb(e.getValue()),
                         usagePriority))
                 .sorted((pred1, pred2) -> -Double.compare(pred1.getProbability(), pred2.getProbability()))
@@ -156,12 +166,12 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     /**
      * Gets estimation of context usage count according to {@link IdNamesNGramModelRunner#myModel}.
      * It is estimated as a weighted sum of context counts of different size.
-     *
+     * <p>
      * Detailed explanation.
      * Consider context sequence {C_i, ..., C_k} as C(i,k) and order of n-gram as N.
      * Then final estimation of context usage count will be: sum from i=0 to N-1 of 1/2^i * count(C(i, N-1)).
      * It is very similar to Jelinek-Mercer smoothing, which is used in {@link com.intellij.completion.ngram.slp.modeling.ngram.JMModel}.
-     *
+     * <p>
      * May be it is better to assign it to 1 for all sequences,
      * but imho we have to evaluate some metrics to make that decision.
      *
@@ -203,17 +213,36 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return null;
     }
 
-    public void learnProject(@NotNull Project project, @NotNull ProgressIndicator progressIndicator) {
-        progressIndicator.setIndeterminate(false);
+    public void learnProject(@NotNull Project project, @Nullable ProgressIndicator progressIndicator) {
+        if (progressIndicator != null) {
+            progressIndicator.setIndeterminate(false);
+        }
         Collection<VirtualFile> files = FileTypeIndex.getFiles(JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project));
-        double progress = 0;
-        final double total = files.size();
+        int progress = 0;
+        final int total = files.size();
+        System.out.printf("Training NGram model on %s...\n", project.getName());
+        Instant start = Instant.now();
         for (VirtualFile file : files) {
             ObjectUtils.consumeIfNotNull(PsiManager.getInstance(project).findFile(file), this::learnPsiFile);
-            progressIndicator.setText2(file.getPath());
-            progressIndicator.setFraction(++progress / total);
+            double fraction = ++progress / (double) total;
+            if (total < 10 || progress % (total / 10) == 0) {
+                System.out.printf("Status:\t%.0f%%\r", fraction * 100.);
+            }
+            if (progressIndicator != null) {
+                progressIndicator.setText2(file.getPath());
+                progressIndicator.setFraction(fraction);
+            }
         }
+        Instant end = Instant.now();
+        Duration delta = Duration.between(start, end);
+        NotificationsUtil.notify(project,
+                "NGram model training is completed.",
+                String.format("Time of training on %s: %d ms.",
+                        project.getName(),
+                        delta.toMillis()));
+        System.out.printf("Done in %s\n", delta.toString());
+        System.out.printf("Vocabulary size: %d\n", myVocabulary.size());
     }
 
     public void learnPsiFile(@NotNull PsiFile file) {
@@ -224,7 +253,8 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return SyntaxTraverser.psiTraverser()
                 .withRoot(file)
                 .onRange(new TextRange(0, 64 * 1024)) // first 128 KB of chars
-                .filter(IdNamesNGramModelRunner::shouldLex)
+                .forceIgnore(node -> node instanceof PsiComment)
+                .filter(PsiUtils::shouldLex)
                 .toList()
                 .stream()
                 .peek(this::rememberIdName)
@@ -240,12 +270,6 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 myRememberedIdentifiers.get(parentClass).add(myVocabulary.toIndex(element.getText()));
             }
         }
-    }
-
-    public static boolean shouldLex(@NotNull PsiElement element) {
-        return element.getFirstChild() == null // is leaf
-                && !StringUtils.isBlank(element.getText())
-                && !(element instanceof PsiComment);
     }
 
     private double toProb(@NotNull Pair<Double, Double> probConf) {
@@ -291,6 +315,10 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
             e.printStackTrace();
         }
         return (counterFile.length() + vocabularyFile.length() + rememberedVariablesFile.length()) / (1024. * 1024);
+    }
+
+    public void load() {
+        load(null);
     }
 
     public void load(@Nullable ProgressIndicator progressIndicator) {

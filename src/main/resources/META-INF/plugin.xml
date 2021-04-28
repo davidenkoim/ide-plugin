@@ -19,13 +19,19 @@
     <extensions defaultExtensionNs="com.intellij">
         <registryKey key="developer.mode" description="Registry for showing id names suggesting plugin notifications"
                      defaultValue="True" restartRequired="false"/>
+        <!-- Headless running part-->
+        <appStarter implementation="tools.graphVarMiner.PluginRunner"/>
+        <appStarter implementation="tools.varMiner.PluginRunner"/>
+        <appStarter implementation="tools.graphModelsEvaluator.PluginRunner"/>
+        <appStarter implementation="tools.modelsEvaluator.PluginRunner"/>
+        <!-- End of headless running part-->
         <intentionAction>
             <className>org.jetbrains.id.names.suggesting.impl.SuggestVariableNamesIntention</className>
         </intentionAction>
-        <projectService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager"/>
-        <projectService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingService"/>
-        <backgroundPostStartupActivity
-                implementation="org.jetbrains.id.names.suggesting.LoadingGlobalModelStartupActivity"/>
+        <applicationService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager"/>
+        <applicationService serviceImplementation="org.jetbrains.id.names.suggesting.IdNamesSuggestingService"/>
+        <!--        <backgroundPostStartupActivity-->
+        <!--                implementation="org.jetbrains.id.names.suggesting.LoadingGlobalModelStartupActivity"/>-->
         <inspectionToolProvider implementation="inspections.variable.VariableNamesProvider"/>
         <!-- Astrid part-->
         <intentionAction>
@@ -56,6 +62,10 @@
         </action>
         <action id="train.global.id.model" class="org.jetbrains.id.names.suggesting.impl.TrainGlobalNGramModelAction"
                 text="Add Project To Global Id Model">
+            <add-to-group group-id="AnalyzeMenu" anchor="first"/>
+        </action>
+        <action id="build.dataset.from.project" class="tools.varMiner.DatasetBuildAction"
+                text="Build Dataset From Project">
             <add-to-group group-id="AnalyzeMenu" anchor="first"/>
         </action>
     </actions>

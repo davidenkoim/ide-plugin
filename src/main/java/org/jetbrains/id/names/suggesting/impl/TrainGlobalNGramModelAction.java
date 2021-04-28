@@ -23,22 +23,12 @@ public class TrainGlobalNGramModelAction extends AbstractTrainModelAction {
     protected void doActionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         assert project != null;
-        IdNamesSuggestingModelManager modelManager = IdNamesSuggestingModelManager.getInstance(project);
-        ProgressManager.getInstance().run(new Task.Backgroundable(project, IdNamesSuggestingBundle.message("training.task.title")) {
+        IdNamesSuggestingModelManager modelManager = IdNamesSuggestingModelManager.getInstance();
+        ProgressManager.getInstance().run(new Task.Backgroundable(project, IdNamesSuggestingBundle.message("global.training.task.title")) {
             @Override
             public void run(@NotNull ProgressIndicator progressIndicator) {
-                progressIndicator.setText(IdNamesSuggestingBundle.message("training.progress.indicator.text", project.getName()));
-                ReadAction.nonBlocking(() -> {
-                    Instant start = Instant.now();
-                    double size = modelManager.trainGlobalNGramModel(project, progressIndicator);
-                    Instant end = Instant.now();
-                    NotificationsUtil.notify(project,
-                            "Training of global model is completed.",
-                            String.format("Time of training on %s: %dms. Model size: %.3f Mb",
-                                    project.getName(),
-                                    Duration.between(start, end).toMillis(),
-                                    size));
-                })
+                progressIndicator.setText(IdNamesSuggestingBundle.message("global.training.progress.indicator.text", project.getName()));
+                ReadAction.nonBlocking(() -> modelManager.trainGlobalNGramModel(project, progressIndicator, true))
                         .inSmartMode(project)
                         .executeSynchronously();
             }

@@ -6,7 +6,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.*
-import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor
+import org.jetbrains.id.names.suggesting.PsiUtils.findReferences
 import java.util.concurrent.atomic.AtomicReference
 
 object PsiUtils {
@@ -55,7 +55,7 @@ object PsiUtils {
     fun caretInsideVariable(variable: PsiVariable): Boolean {
         val offset = getOffset(variable)
         return if (offset != null) {
-            NGramVariableNamesContributor.findReferences(variable).anyMatch { reference: PsiReference ->
+            findReferences(variable, variable.containingFile).anyMatch { reference: PsiReference ->
                 offset >= reference.rangeInElement.startOffset &&
                         offset <= reference.rangeInElement.endOffset
             }
