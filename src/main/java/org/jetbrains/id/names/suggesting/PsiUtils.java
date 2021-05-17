@@ -16,7 +16,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -154,5 +156,15 @@ public class PsiUtils {
 
     public static boolean isLeaf(@NotNull PsiElement element) {
         return element.getFirstChild() == null;
+    }
+
+    public static Set<PsiElement> getParents(PsiElement element) {
+        Set<PsiElement> parents = new LinkedHashSet<>();
+        PsiElement parent = element.getParent();
+        while (!(parent instanceof PsiFile)) {
+            parents.add(parent);
+            parent = parent.getParent();
+        }
+        return parents;
     }
 }

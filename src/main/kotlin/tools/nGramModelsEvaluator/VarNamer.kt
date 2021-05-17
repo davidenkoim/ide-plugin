@@ -1,9 +1,8 @@
-package tools.modelsEvaluator
+package tools.nGramModelsEvaluator
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.ide.highlighter.JavaFileType
-import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -12,18 +11,14 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.util.io.HttpRequests
 import com.jetbrains.rd.util.string.printToString
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager
 import org.jetbrains.id.names.suggesting.VarNamePrediction
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
-import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor
 import org.jetbrains.id.names.suggesting.naturalize.GlobalNaturalizeContributor
 import org.jetbrains.id.names.suggesting.naturalize.ProjectNaturalizeContributor
-import tools.nGramModelsEvaluator.NaturalizePrediction
-import tools.varMiner.DatasetExtractor
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
@@ -33,9 +28,7 @@ import kotlin.streams.asSequence
 
 class VarNamer {
     companion object {
-        private val LOG = logger<VarNamer>()
-        private const val TRANSFORMER_SERVER_URL = "http://127.0.0.1:5000/"
-        private var ngramContributorClass: Class<out NGramVariableNamesContributor>? = null
+        private var ngramContributorClass: Class<out VariableNamesContributor>? = null
         private var naturalizeContributorClass: Class<out VariableNamesContributor>? = null
 
         fun predict(project: Project, dir: Path, ngramContributorType: String) {
@@ -75,7 +68,7 @@ class VarNamer {
                 val psiFile = psiManager.findFile(file)
                 if (psiFile != null) {
                     val filePath = file.path
-                    val filePredictions = HashMap<String, List<VarNamePredictions>>()
+                    val filePredictions = HashMap<String, List<NGramPredictions>>()
                     filePredictions[filePath] = predictPsiFile(psiFile)
                     FileOutputStream(predictionsFile, true).bufferedWriter().use {
                         it.write(mapper.writeValueAsString(filePredictions))
@@ -104,7 +97,7 @@ class VarNamer {
             )
         }
 
-        private fun predictPsiFile(file: PsiFile): List<VarNamePredictions> {
+        private fun predictPsiFile(file: PsiFile): List<NGramPredictions> {
             val fileEditorManager = FileEditorManager.getInstance(file.project)
             val editor = fileEditorManager.openTextEditor(
                 OpenFileDescriptor(
@@ -137,7 +130,7 @@ class VarNamer {
             return predictionsList
         }
 
-        private fun predictVarName(variable: PsiVariable, editor: Editor): VarNamePredictions? {
+        private fun predictVarName(variable: PsiVariable, editor: Editor): NGramPredictions? {
             val nameIdentifier = variable.nameIdentifier
             if (nameIdentifier === null || nameIdentifier.text == "") return null
 
@@ -149,24 +142,18 @@ class VarNamer {
             val naturalizePredictions = predictWithNaturalize(variable)
             val naturalizeEvaluationTime = (System.nanoTime() - startTime) / 1e9
 
-            startTime = System.nanoTime()
-            val transformerPredictions = predictWithTransformer(variable)
-            val transformerEvaluationTime = (System.nanoTime() - startTime) / 1e9
-
-            return VarNamePredictions(
+            return NGramPredictions(
                 nameIdentifier.text,
                 nGramPredictions,
                 nGramEvaluationTime,
                 naturalizePredictions,
                 naturalizeEvaluationTime,
-                transformerPredictions,
-                transformerEvaluationTime,
                 getLinePosition(nameIdentifier, editor),
                 variable.javaClass.interfaces[0].simpleName
             )
         }
 
-        private fun predictWithNGram(variable: PsiVariable): List<ModelPrediction> {
+        private fun predictWithNGram(variable: PsiVariable): List<NGramPrediction> {
             val nameSuggestions: List<VarNamePrediction> = ArrayList()
             val contributor = VariableNamesContributor.EP_NAME.findExtension(ngramContributorClass!!)
             contributor!!.contribute(
@@ -174,7 +161,7 @@ class VarNamer {
                 nameSuggestions,
                 false
             )
-            return nameSuggestions.map { x: VarNamePrediction -> ModelPrediction(x.name, x.probability) }
+            return nameSuggestions.map { x: VarNamePrediction -> NGramPrediction(x.name, x.probability) }
         }
 
         private fun predictWithNaturalize(variable: PsiVariable): List<NaturalizePrediction> {
@@ -188,34 +175,22 @@ class VarNamer {
             return nameSuggestions.map { x: VarNamePrediction -> NaturalizePrediction(x.name, x.probability) }
         }
 
-        private fun predictWithTransformer(variable: PsiVariable): Any {
-            val variableFeatures = DatasetExtractor.getVariableFeatures(variable, variable.containingFile)
-            return HttpRequests.post(TRANSFORMER_SERVER_URL, HttpRequests.JSON_CONTENT_TYPE)
-                .connect(HttpRequests.RequestProcessor {
-                    val objectMapper = ObjectMapper()
-                    it.write(objectMapper.writeValueAsBytes(variableFeatures))
-                    val str = it.readString()
-                    objectMapper.readValue(str, Any::class.java)
-                }, null, LOG)
-        }
-
         private fun getLinePosition(identifier: PsiElement, editor: Editor): Int {
             return editor.offsetToLogicalPosition(identifier.textOffset).line
         }
     }
 }
 
-class VarNamePredictions(
+class NGramPredictions(
     val groundTruth: String,
-    val nGramPrediction: List<ModelPrediction>,
+    val nGramPrediction: List<NGramPrediction>,
     val nGramEvaluationTime: Double,
     val naturalizePrediction: List<NaturalizePrediction>,
     val naturalizeEvaluationTime: Double,
-    val transformerPrediction: Any,
-    val transformerResponseTime: Double,
     val linePosition: Int,
     val psiInterface: String
 )
 
-class ModelPrediction(val name: Any, val p: Double)
+class NGramPrediction(val name: Any, val p: Double)
+
 class NaturalizePrediction(val name: Any, val logit: Double)

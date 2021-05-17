@@ -1,5 +1,6 @@
 package org.jetbrains.id.names.suggesting.api;
 
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiNameIdentifierOwner;
 import kotlin.Pair;
 import org.jetbrains.id.names.suggesting.VarNamePrediction;
@@ -19,9 +20,13 @@ public interface IdNamesSuggestingModelRunner {
     /**
      * Predict probability of last token in a series of n-grams.
      *
-     * @param usageNGrams : n-grams from which model should get probability of the last token.
+     * @param usageNGrams  : n-grams from which model should get probability of the last token.
      * @param forgetUsages :
      * @return probability, modelPriority
      */
     Pair<Double, Integer> getProbability(List<List<String>> usageNGrams, boolean forgetUsages);
+
+    void learnPsiFile(PsiFile file);
+
+    void forgetPsiFile(PsiFile file);
 }
