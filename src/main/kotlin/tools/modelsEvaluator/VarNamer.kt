@@ -14,11 +14,15 @@ import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.io.HttpRequests
 import com.jetbrains.rd.util.string.printToString
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager
 import org.jetbrains.id.names.suggesting.VarNamePrediction
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor
+import org.jetbrains.id.names.suggesting.naturalize.GlobalNaturalizeContributor
+import org.jetbrains.id.names.suggesting.naturalize.ProjectNaturalizeContributor
+import tools.nGramModelsEvaluator.NaturalizePrediction
 import tools.varMiner.DatasetExtractor
 import java.io.File
 import java.io.FileOutputStream
@@ -31,17 +35,18 @@ class VarNamer {
     companion object {
         private val LOG = logger<VarNamer>()
         private const val TRANSFORMER_SERVER_URL = "http://127.0.0.1:5000/"
-        private var ngramContributorType: Class<out NGramVariableNamesContributor>? = null
-            get() {
-                return if (field === null) {
-                    throw Exception("You have to set up ngramContributorType")
-                } else field
-            }
+        private var ngramContributorClass: Class<out NGramVariableNamesContributor>? = null
+        private var naturalizeContributorClass: Class<out VariableNamesContributor>? = null
 
         fun predict(project: Project, dir: Path, ngramContributorType: String) {
-            this.ngramContributorType = when (ngramContributorType) {
+            ngramContributorClass = when (ngramContributorType) {
                 "global" -> GlobalVariableNamesContributor::class.java
                 "project" -> ProjectVariableNamesContributor::class.java
+                else -> throw NotImplementedError("ngramContributorType has to be \"global\" or \"project\"!")
+            }
+            naturalizeContributorClass = when (ngramContributorType) {
+                "global" -> GlobalNaturalizeContributor::class.java
+                "project" -> ProjectNaturalizeContributor::class.java
                 else -> throw NotImplementedError("ngramContributorType has to be \"global\" or \"project\"!")
             }
             val mapper = ObjectMapper()
@@ -107,6 +112,11 @@ class VarNamer {
                     file.virtualFile
                 ), true
             )!!
+            if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
+                IdNamesSuggestingModelManager.getInstance()
+                    .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
+                    .forgetPsiFile(file)
+            }
             val predictionsList = SyntaxTraverser.psiTraverser()
                 .withRoot(file)
                 .onRange(TextRange(0, 64 * 1024)) // first 128 KB of chars
@@ -118,6 +128,11 @@ class VarNamer {
                 .map { v -> predictVarName(v, editor) }
                 .filterNotNull()
                 .toList()
+            if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
+                IdNamesSuggestingModelManager.getInstance()
+                    .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
+                    .learnPsiFile(file)
+            }
             fileEditorManager.closeFile(file.virtualFile)
             return predictionsList
         }
@@ -131,6 +146,10 @@ class VarNamer {
             val nGramEvaluationTime = (System.nanoTime() - startTime) / 1.0e9
 
             startTime = System.nanoTime()
+            val naturalizePredictions = predictWithNaturalize(variable)
+            val naturalizeEvaluationTime = (System.nanoTime() - startTime) / 1e9
+
+            startTime = System.nanoTime()
             val transformerPredictions = predictWithTransformer(variable)
             val transformerEvaluationTime = (System.nanoTime() - startTime) / 1e9
 
@@ -138,6 +157,8 @@ class VarNamer {
                 nameIdentifier.text,
                 nGramPredictions,
                 nGramEvaluationTime,
+                naturalizePredictions,
+                naturalizeEvaluationTime,
                 transformerPredictions,
                 transformerEvaluationTime,
                 getLinePosition(nameIdentifier, editor),
@@ -147,13 +168,24 @@ class VarNamer {
 
         private fun predictWithNGram(variable: PsiVariable): List<ModelPrediction> {
             val nameSuggestions: List<VarNamePrediction> = ArrayList()
-            val contributor = VariableNamesContributor.EP_NAME.findExtension(ngramContributorType!!)
+            val contributor = VariableNamesContributor.EP_NAME.findExtension(ngramContributorClass!!)
             contributor!!.contribute(
                 variable,
                 nameSuggestions,
-                ngramContributorType != GlobalVariableNamesContributor::class.java
+                false
             )
             return nameSuggestions.map { x: VarNamePrediction -> ModelPrediction(x.name, x.probability) }
+        }
+
+        private fun predictWithNaturalize(variable: PsiVariable): List<NaturalizePrediction> {
+            val nameSuggestions: List<VarNamePrediction> = ArrayList()
+            val contributor = VariableNamesContributor.EP_NAME.findExtension(naturalizeContributorClass!!)
+            contributor!!.contribute(
+                variable,
+                nameSuggestions,
+                false
+            )
+            return nameSuggestions.map { x: VarNamePrediction -> NaturalizePrediction(x.name, x.probability) }
         }
 
         private fun predictWithTransformer(variable: PsiVariable): Any {
@@ -177,6 +209,8 @@ class VarNamePredictions(
     val groundTruth: String,
     val nGramPrediction: List<ModelPrediction>,
     val nGramEvaluationTime: Double,
+    val naturalizePrediction: List<NaturalizePrediction>,
+    val naturalizeEvaluationTime: Double,
     val transformerPrediction: Any,
     val transformerResponseTime: Double,
     val linePosition: Int,
@@ -184,3 +218,4 @@ class VarNamePredictions(
 )
 
 class ModelPrediction(val name: Any, val p: Double)
+class NaturalizePrediction(val name: Any, val logit: Double)
