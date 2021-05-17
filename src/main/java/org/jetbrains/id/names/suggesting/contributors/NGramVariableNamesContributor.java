@@ -1,6 +1,7 @@
 package org.jetbrains.id.names.suggesting.contributors;
 
 import com.google.common.collect.Lists;
+import com.intellij.completion.ngram.slp.translating.Vocabulary;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
 import kotlin.Pair;
@@ -20,6 +21,7 @@ import java.util.stream.Stream;
 
 import static java.lang.Integer.max;
 import static org.jetbrains.id.names.suggesting.PsiUtils.findReferences;
+import static org.jetbrains.id.names.suggesting.PsiUtils.isVariableOrReference;
 
 public abstract class NGramVariableNamesContributor implements VariableNamesContributor {
     public static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
@@ -57,17 +59,17 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
         return SUPPORTED_TYPES.stream().anyMatch(type -> type.isInstance(identifierOwner));
     }
 
-    private List<List<String>> findUsageNGrams(PsiNameIdentifierOwner identifierOwner) {
-        Stream<PsiReference> elementUsages = findReferences(identifierOwner, identifierOwner.getContainingFile());
-        return Stream.concat(Stream.of(identifierOwner), elementUsages)
+    private List<List<String>> findUsageNGrams(PsiVariable variable) {
+        Stream<PsiReference> elementUsages = findReferences(variable, variable.getContainingFile());
+        return Stream.concat(Stream.of(variable), elementUsages)
                 .map(PsiUtils::getIdentifier)
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(PsiElement::getTextOffset))
-                .map(this::getNGram)
+                .map(identifier -> getNGram(identifier, variable))
                 .collect(Collectors.toList());
     }
 
-    private List<String> getNGram(@NotNull PsiElement element) {
+    private List<String> getNGram(@NotNull PsiElement element, @NotNull PsiVariable variable) {
         int order = modelOrder;
         final List<String> tokens = new ArrayList<>();
         for (PsiElement token : SyntaxTraverser
@@ -76,11 +78,18 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
                 .onRange(new TextRange(0, max(0, element.getTextOffset())))
                 .forceIgnore(node -> node instanceof PsiComment)
                 .filter(PsiUtils::shouldLex)) {
-            tokens.add(token.getText());
+            tokens.add(processToken(token, variable));
             if (--order < 1) {
                 break;
             }
         }
         return Lists.reverse(tokens);
+    }
+
+    public static String processToken(@NotNull PsiElement token, @NotNull PsiVariable variable) {
+        if (isVariableOrReference(variable, token)) {
+            return Vocabulary.unknownCharacter;
+        }
+        return token.getText();
     }
 }
