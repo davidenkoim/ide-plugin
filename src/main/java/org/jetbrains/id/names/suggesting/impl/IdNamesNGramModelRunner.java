@@ -40,6 +40,14 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     private final NGramModel myModel;
     private Vocabulary myVocabulary = new Vocabulary();
 
+    public HashMap<Class<? extends PsiNameIdentifierOwner>, HashSet<Integer>> getRememberedIdentifiers() {
+        return myRememberedIdentifiers;
+    }
+
+    public NGramModel getModel() {
+        return myModel;
+    }
+
     public Vocabulary getVocabulary() {
         return myVocabulary;
     }
@@ -47,6 +55,14 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
     public IdNamesNGramModelRunner(List<Class<? extends PsiNameIdentifierOwner>> supportedTypes, boolean isLargeCorpora) {
         myModel = new JMModel(6, 0.5, isLargeCorpora ? new GigaCounter() : new ArrayTrieCounter());
         this.setSupportedTypes(supportedTypes);
+    }
+
+    public IdNamesNGramModelRunner(NGramModel model,
+                                   Vocabulary vocabulary,
+                                   HashMap<Class<? extends PsiNameIdentifierOwner>, HashSet<Integer>> rememberedIdentifiers) {
+        myModel = model;
+        myVocabulary = vocabulary;
+        myRememberedIdentifiers = rememberedIdentifiers;
     }
 
     public void setSupportedTypes(List<Class<? extends PsiNameIdentifierOwner>> supportedTypes) {
@@ -245,8 +261,14 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         System.out.printf("Vocabulary size: %d\n", myVocabulary.size());
     }
 
+    @Override
     public void learnPsiFile(@NotNull PsiFile file) {
         myModel.learn(myVocabulary.toIndices(lexPsiFile(file)));
+    }
+
+    @Override
+    public void forgetPsiFile(@NotNull PsiFile file) {
+        myModel.forget(myVocabulary.toIndices(lexPsiFile(file)));
     }
 
     private List<String> lexPsiFile(@NotNull PsiFile file) {
