@@ -15,11 +15,14 @@ import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.io.HttpRequests
 import com.jetbrains.rd.util.string.printToString
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager
 import org.jetbrains.id.names.suggesting.VarNamePrediction
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor
 import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor
+import org.jetbrains.id.names.suggesting.naturalize.GlobalNaturalizeContributor
+import org.jetbrains.id.names.suggesting.naturalize.ProjectNaturalizeContributor
 import tools.graphVarMiner.GraphDatasetExtractor
 import tools.graphVarMiner.JavaGraphExtractor
 import java.io.File
@@ -33,17 +36,18 @@ class GraphVarNamer {
     companion object {
         private val LOG = logger<GraphVarNamer>()
         private const val GNN_SERVER_URL = "http://127.0.0.1:5000/"
-        private var ngramContributorType: Class<out NGramVariableNamesContributor>? = null
-            get() {
-                return if (field === null) {
-                    throw Exception("You have to set up ngramContributorType")
-                } else field
-            }
+        private var ngramContributorClass: Class<out NGramVariableNamesContributor>? = null
+        private var naturalizeContributorClass: Class<out VariableNamesContributor>? = null
 
         fun predict(project: Project, dir: Path, ngramContributorType: String) {
-            this.ngramContributorType = when (ngramContributorType) {
+            this.ngramContributorClass = when (ngramContributorType) {
                 "global" -> GlobalVariableNamesContributor::class.java
                 "project" -> ProjectVariableNamesContributor::class.java
+                else -> throw NotImplementedError("ngramContributorType has to be \"global\" or \"project\"!")
+            }
+            naturalizeContributorClass = when (ngramContributorType) {
+                "global" -> GlobalNaturalizeContributor::class.java
+                "project" -> ProjectNaturalizeContributor::class.java
                 else -> throw NotImplementedError("ngramContributorType has to be \"global\" or \"project\"!")
             }
             val mapper = ObjectMapper()
@@ -102,14 +106,19 @@ class GraphVarNamer {
 
         private fun predictPsiFile(file: PsiFile): List<VarNamePredictions>? {
             val fileEditorManager = FileEditorManager.getInstance(file.project)
-            val editor = fileEditorManager.openTextEditor(
-                OpenFileDescriptor(
-                    file.project,
-                    file.virtualFile
-                ), true
-            )!!
             try {
+                val editor = fileEditorManager.openTextEditor(
+                    OpenFileDescriptor(
+                        file.project,
+                        file.virtualFile
+                    ), true
+                )!!
                 val graphExtractor = JavaGraphExtractor(file)
+                if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
+                    IdNamesSuggestingModelManager.getInstance()
+                        .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
+                        .forgetPsiFile(file)
+                }
                 val predictionsList = SyntaxTraverser.psiTraverser()
                     .withRoot(file)
                     .onRange(TextRange(0, 64 * 1024)) // first 128 KB of chars
@@ -121,10 +130,16 @@ class GraphVarNamer {
                     .map { v -> predictVarName(v, editor, graphExtractor) }
                     .filterNotNull()
                     .toList()
-                fileEditorManager.closeFile(file.virtualFile)
                 return predictionsList
             } catch (e: Exception) {
                 return null
+            } finally {
+                if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
+                    IdNamesSuggestingModelManager.getInstance()
+                        .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
+                        .learnPsiFile(file)
+                }
+                fileEditorManager.closeFile(file.virtualFile)
             }
         }
 
@@ -141,6 +156,10 @@ class GraphVarNamer {
             val nGramEvaluationTime = (System.nanoTime() - startTime) / 1.0e9
 
             startTime = System.nanoTime()
+            val naturalizePredictions = predictWithNaturalize(variable)
+            val naturalizeEvaluationTime = (System.nanoTime() - startTime) / 1e9
+
+            startTime = System.nanoTime()
             val gnnPredictions = predictWithGNN(variable, graphExtractor)
             val gnnEvaluationTime = (System.nanoTime() - startTime) / 1.0e9
             if (gnnPredictions === null) return null
@@ -148,6 +167,8 @@ class GraphVarNamer {
                 nameIdentifier.text,
                 nGramPredictions,
                 nGramEvaluationTime,
+                naturalizePredictions,
+                naturalizeEvaluationTime,
                 gnnPredictions,
                 gnnEvaluationTime,
                 getLinePosition(nameIdentifier, editor),
@@ -157,13 +178,24 @@ class GraphVarNamer {
 
         private fun predictWithNGram(variable: PsiVariable): List<ModelPrediction> {
             val nameSuggestions: List<VarNamePrediction> = ArrayList()
-            val contributor = VariableNamesContributor.EP_NAME.findExtension(ngramContributorType!!)
+            val contributor = VariableNamesContributor.EP_NAME.findExtension(ngramContributorClass!!)
             contributor!!.contribute(
                 variable,
                 nameSuggestions,
-                ngramContributorType != GlobalVariableNamesContributor::class.java
+                false
             )
             return nameSuggestions.map { x: VarNamePrediction -> ModelPrediction(x.name, x.probability) }
+        }
+
+        private fun predictWithNaturalize(variable: PsiVariable): List<NaturalizePrediction> {
+            val nameSuggestions: List<VarNamePrediction> = ArrayList()
+            val contributor = VariableNamesContributor.EP_NAME.findExtension(naturalizeContributorClass!!)
+            contributor!!.contribute(
+                variable,
+                nameSuggestions,
+                false
+            )
+            return nameSuggestions.map { x: VarNamePrediction -> NaturalizePrediction(x.name, x.probability) }
         }
 
         private fun predictWithGNN(variable: PsiVariable, graphExtractor: JavaGraphExtractor): Any? {
@@ -186,6 +218,8 @@ class VarNamePredictions(
     val groundTruth: String,
     val nGramPrediction: List<ModelPrediction>,
     val nGramEvaluationTime: Double,
+    val naturalizePrediction: List<NaturalizePrediction>,
+    val naturalizeEvaluationTime: Double,
     val gnnPrediction: Any,
     val gnnResponseTime: Double,
     val linePosition: Int,
@@ -193,3 +227,4 @@ class VarNamePredictions(
 )
 
 class ModelPrediction(val name: Any, val p: Double)
+class NaturalizePrediction(val name: Any, val logit: Double)
