@@ -58,7 +58,7 @@ class VarNamer {
             val files = FileTypeIndex.getFiles(
                 JavaFileType.INSTANCE,
                 GlobalSearchScope.projectScope(project)
-            ).filter { file -> file.path !in predictedFilePaths }
+            ).filter { file -> file.path !in predictedFilePaths && file.length < 125 * 1024 }
             var progress = 0
             val total = files.size
             val start = Instant.now()
@@ -66,27 +66,26 @@ class VarNamer {
             println("Number of files to parse: $total")
             for (file in files) {
                 val psiFile = psiManager.findFile(file)
-                if (psiFile != null) {
-                    val filePath = file.path
-                    val filePredictions = HashMap<String, List<NGramPredictions>>()
-                    filePredictions[filePath] = predictPsiFile(psiFile)
-                    FileOutputStream(predictionsFile, true).bufferedWriter().use {
-                        it.write(mapper.writeValueAsString(filePredictions))
-                        it.newLine()
-                    }
-                    val fraction = ++progress / total.toDouble()
-                    if (total < 100 || progress % (total / 100) == 0) {
-                        val timeSpent = Duration.between(start, Instant.now())
-                        val timeLeft = Duration.ofSeconds((timeSpent.toSeconds() * (1 / fraction - 1)).toLong())
-                        System.out.printf(
-                            "Status: %.0f%%;\tTime spent: %s;\tTime left: %s\r",
-                            fraction * 100.0,
-                            timeSpent.printToString(),
-                            timeLeft.printToString()
-                        )
-                    }
-                } else {
-                    println("PSI isn't found")
+                if (psiFile === null) continue
+                val filePath = file.path
+                val filePredictions = HashMap<String, List<NGramPredictions>>()
+                val preds = predictPsiFile(psiFile)
+                if (preds === null) continue
+                filePredictions[filePath] = preds
+                FileOutputStream(predictionsFile, true).bufferedWriter().use {
+                    it.write(mapper.writeValueAsString(filePredictions))
+                    it.newLine()
+                }
+                val fraction = ++progress / total.toDouble()
+                if (total < 100 || progress % (total / 100) == 0) {
+                    val timeSpent = Duration.between(start, Instant.now())
+                    val timeLeft = Duration.ofSeconds((timeSpent.toSeconds() * (1 / fraction - 1)).toLong())
+                    System.out.printf(
+                        "Status: %.0f%%;\tTime spent: %s;\tTime left: %s\r",
+                        fraction * 100.0,
+                        timeSpent.printToString(),
+                        timeLeft.printToString()
+                    )
                 }
             }
             val end = Instant.now()
@@ -97,37 +96,42 @@ class VarNamer {
             )
         }
 
-        private fun predictPsiFile(file: PsiFile): List<NGramPredictions> {
+        private fun predictPsiFile(file: PsiFile): List<NGramPredictions>? {
             val fileEditorManager = FileEditorManager.getInstance(file.project)
-            val editor = fileEditorManager.openTextEditor(
-                OpenFileDescriptor(
-                    file.project,
-                    file.virtualFile
-                ), true
-            )!!
-            if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
-                IdNamesSuggestingModelManager.getInstance()
-                    .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
-                    .forgetPsiFile(file)
+            try {
+                val editor = fileEditorManager.openTextEditor(
+                    OpenFileDescriptor(
+                        file.project,
+                        file.virtualFile
+                    ), true
+                )!!
+                if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
+                    IdNamesSuggestingModelManager.getInstance()
+                        .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
+                        .forgetPsiFile(file)
+                }
+                val predictionsList = SyntaxTraverser.psiTraverser()
+                    .withRoot(file)
+                    .onRange(TextRange(0, 64 * 1024)) // first 128 KB of chars
+                    .filter { element: PsiElement? -> element is PsiVariable }
+                    .toList()
+                    .asSequence()
+                    .filterNotNull()
+                    .map { e -> e as PsiVariable }
+                    .map { v -> predictVarName(v, editor) }
+                    .filterNotNull()
+                    .toList()
+                return predictionsList
+            } catch (e: Exception) {
+                return null
+            } finally {
+                if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
+                    IdNamesSuggestingModelManager.getInstance()
+                        .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
+                        .learnPsiFile(file)
+                }
+                fileEditorManager.closeFile(file.virtualFile)
             }
-            val predictionsList = SyntaxTraverser.psiTraverser()
-                .withRoot(file)
-                .onRange(TextRange(0, 64 * 1024)) // first 128 KB of chars
-                .filter { element: PsiElement? -> element is PsiVariable }
-                .toList()
-                .asSequence()
-                .filterNotNull()
-                .map { e -> e as PsiVariable }
-                .map { v -> predictVarName(v, editor) }
-                .filterNotNull()
-                .toList()
-            if (ngramContributorClass == ProjectVariableNamesContributor::class.java) {
-                IdNamesSuggestingModelManager.getInstance()
-                    .getModelRunner(ProjectVariableNamesContributor::class.java, file.project)
-                    .learnPsiFile(file)
-            }
-            fileEditorManager.closeFile(file.virtualFile)
-            return predictionsList
         }
 
         private fun predictVarName(variable: PsiVariable, editor: Editor): NGramPredictions? {
