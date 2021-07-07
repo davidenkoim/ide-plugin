@@ -3,6 +3,7 @@ package org.jetbrains.id.names.suggesting.api;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiNameIdentifierOwner;
 import kotlin.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.VarNamePrediction;
 
 import java.util.List;
@@ -15,7 +16,7 @@ public interface IdNamesSuggestingModelRunner {
      * @param usageNGrams     n-grams from which model should get suggestions.
      * @return List of predictions.
      */
-    List<VarNamePrediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams, boolean forgetUsages);
+    @NotNull List<VarNamePrediction> suggestNames(@NotNull Class<? extends PsiNameIdentifierOwner> identifierClass, @NotNull List<List<String>> usageNGrams, boolean forgetUsages);
 
     /**
      * Predict probability of last token in a series of n-grams.
@@ -24,9 +25,9 @@ public interface IdNamesSuggestingModelRunner {
      * @param forgetUsages :
      * @return probability, modelPriority
      */
-    Pair<Double, Integer> getProbability(List<List<String>> usageNGrams, boolean forgetUsages);
+    @NotNull Pair<Double, Integer> getProbability(@NotNull List<List<String>> usageNGrams, boolean forgetUsages);
 
-    void learnPsiFile(PsiFile file);
+    void learnPsiFile(@NotNull PsiFile file);
 
-    void forgetPsiFile(PsiFile file);
+    void forgetPsiFile(@NotNull PsiFile file);
 }

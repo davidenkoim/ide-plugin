@@ -12,7 +12,7 @@ import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
-import org.jetbrains.id.names.suggesting.NotificationsUtil;
+import org.jetbrains.id.names.suggesting.utils.NotificationsUtil;
 
 import java.time.Duration;
 import java.time.Instant;

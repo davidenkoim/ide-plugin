@@ -12,11 +12,7 @@ import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager;
-import org.jetbrains.id.names.suggesting.NotificationsUtil;
 import org.jetbrains.id.names.suggesting.api.AbstractTrainModelAction;
-
-import java.time.Duration;
-import java.time.Instant;
 
 public class TrainProjectNGramModelAction extends AbstractTrainModelAction {
     @Override

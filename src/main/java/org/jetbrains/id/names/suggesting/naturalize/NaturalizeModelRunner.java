@@ -17,9 +17,9 @@ import com.intellij.util.ObjectUtils;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.NotificationsUtil;
-import org.jetbrains.id.names.suggesting.PsiUtils;
 import org.jetbrains.id.names.suggesting.VarNamePrediction;
+import org.jetbrains.id.names.suggesting.utils.NotificationsUtil;
+import org.jetbrains.id.names.suggesting.utils.PsiUtils;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -74,31 +74,33 @@ public class NaturalizeModelRunner {
         return myVocabulary.size();
     }
 
-    public List<VarNamePrediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, Context context, boolean forgetContext) {
+    public @NotNull List<VarNamePrediction> suggestNames(@NotNull Class<? extends PsiNameIdentifierOwner> identifierClass, @NotNull Context context, boolean forgetContext) {
         IntContext intContext = IntContext.fromContext(context, myVocabulary);
+//        TODO: remove all forget usage and add appropriate forget psiFile
         if (forgetContext) {
             this.forgetContext(intContext);
         }
+        IntContext unknownContext = intContext.with(0);
         Set<Integer> candidates = new HashSet<>();
         for (int idx : intContext.varIdxs) {
-            candidates.addAll(getCandidates(intContext.tokens, idx, getIdTypeFilter(identifierClass)));
+            candidates.addAll(getCandidates(unknownContext.tokens, idx, getIdTypeFilter(identifierClass)));
         }
-        List<VarNamePrediction> predictionList = rankCandidates(candidates, intContext);
+        List<VarNamePrediction> predictionList = rankCandidates(candidates, unknownContext);
         if (forgetContext) {
             this.learnContext(intContext);
         }
         return predictionList;
     }
 
-    private List<VarNamePrediction> rankCandidates(Set<Integer> candidates, IntContext intContext) {
+    private @NotNull List<VarNamePrediction> rankCandidates(@NotNull Set<Integer> candidates, @NotNull IntContext intContext) {
         List<Integer> cs = new ArrayList<>();
         List<Double> logits = new ArrayList<>();
         candidates.forEach(candidate -> {
             cs.add(candidate);
             logits.add(getLogProb(intContext.with(candidate)));
         });
-        List<Double> probs = logits;
-//        List<Double> probs = softmax(logits, 10);
+//        List<Double> probs = logits;
+        List<Double> probs = softmax(logits, 6);
         List<VarNamePrediction> predictions = new ArrayList<>();
         for (int i = 0; i < cs.size(); i++) {
             predictions.add(new VarNamePrediction(myVocabulary.toWord(cs.get(i)),
@@ -118,7 +120,7 @@ public class NaturalizeModelRunner {
         return probs.stream().map(p -> p / sumProbs).collect(Collectors.toList());
     }
 
-    private Double getLogProb(IntContext intContext) {
+    private double getLogProb(IntContext intContext) {
         double logProb = 0.;
         int leftIdx;
         int rightIdx = 0;
@@ -132,7 +134,7 @@ public class NaturalizeModelRunner {
         return logProb;
     }
 
-    public Pair<Double, Integer> getProbability(Context context, boolean forgetContext) {
+    public @NotNull Pair<Double, Integer> getProbability(Context context, boolean forgetContext) {
         IntContext intContext = IntContext.fromContext(context, myVocabulary);
         if (forgetContext) {
             this.forgetContext(intContext);
@@ -144,8 +146,8 @@ public class NaturalizeModelRunner {
         return new Pair<>(prob, getModelPriority());
     }
 
-    private Set<Integer> getCandidates(@NotNull List<Integer> tokenIdxs, int idx,
-                                       @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
+    private @NotNull Set<Integer> getCandidates(@NotNull List<Integer> tokenIdxs, int idx,
+                                                @NotNull Predicate<Map.Entry<Integer, ?>> idTypeFilter) {
         return myModel.predictToken(tokenIdxs, idx)
                 .entrySet()
                 .stream()
@@ -204,7 +206,7 @@ public class NaturalizeModelRunner {
                 String.format("Time of training on %s: %d ms.",
                         project.getName(),
                         delta.toMillis()));
-        System.out.printf("Done in %s\n", delta.toString());
+        System.out.printf("Done in %s\n", delta);
         System.out.printf("Vocabulary size: %d\n", myVocabulary.size());
     }
 
@@ -216,7 +218,7 @@ public class NaturalizeModelRunner {
         myModel.forget(myVocabulary.toIndices(lexPsiFile(file)));
     }
 
-    private List<String> lexPsiFile(@NotNull PsiFile file) {
+    private @NotNull List<String> lexPsiFile(@NotNull PsiFile file) {
         return SyntaxTraverser.psiTraverser()
                 .withRoot(file)
                 .onRange(new TextRange(0, 64 * 1024)) // first 128 KB of chars

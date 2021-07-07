@@ -3,13 +3,13 @@ package tools.graphVarMiner;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.PsiUtils;
+import org.jetbrains.id.names.suggesting.utils.PsiUtils;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static org.jetbrains.id.names.suggesting.PsiUtils.*;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.*;
 
 public class JavaGraphExtractor {
     public final static String NEXT_TOKEN = "NextToken";
@@ -81,9 +81,7 @@ public class JavaGraphExtractor {
         Graph<PsiElement> subgraph = new Graph<>();
         Stream.concat(Stream.of(variable), findReferences(variable, this.file))
                 .map(PsiUtils::getIdentifier)
-                .forEach(identifier -> {
-                    subgraph.copyEdgesFromNode(identifier, graph, 8);
-                });
+                .forEach(identifier -> subgraph.copyEdgesFromNode(identifier, graph, 8));
         return subgraph;
     }
 }

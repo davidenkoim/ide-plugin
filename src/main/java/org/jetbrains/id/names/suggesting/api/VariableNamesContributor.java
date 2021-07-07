@@ -24,8 +24,8 @@ public interface VariableNamesContributor {
     /**
      * Get conditional probability of variable name.
      *
-     * @param variable  some variable.
-     * @return          pair of probability and model priority.
+     * @param variable some variable.
+     * @return pair of probability and model priority.
      */
-    Pair<Double, Integer> getProbability(PsiVariable variable, boolean forgetUsages);
+    @NotNull Pair<Double, Integer> getProbability(@NotNull PsiVariable variable, boolean forgetUsages);
 }

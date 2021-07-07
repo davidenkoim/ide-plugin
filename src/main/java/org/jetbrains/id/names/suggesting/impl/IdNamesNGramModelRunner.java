@@ -19,8 +19,13 @@ import com.intellij.util.ObjectUtils;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.*;
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingBundle;
+import org.jetbrains.id.names.suggesting.IdNamesSuggestingService;
+import org.jetbrains.id.names.suggesting.VarNamePrediction;
+import org.jetbrains.id.names.suggesting.VocabularyManager;
 import org.jetbrains.id.names.suggesting.api.IdNamesSuggestingModelRunner;
+import org.jetbrains.id.names.suggesting.utils.NotificationsUtil;
+import org.jetbrains.id.names.suggesting.utils.PsiUtils;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -83,7 +88,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
      * @return List of predictions.
      */
     @Override
-    public List<VarNamePrediction> suggestNames(Class<? extends PsiNameIdentifierOwner> identifierClass, List<List<String>> usageNGrams, boolean forgetUsages) {
+    public @NotNull List<VarNamePrediction> suggestNames(@NotNull Class<? extends PsiNameIdentifierOwner> identifierClass, @NotNull List<List<String>> usageNGrams, boolean forgetUsages) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
         if (forgetUsages) {
             allUsageNGramIndices.forEach(this::forgetUsage);
@@ -109,7 +114,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
      * @return pair of probability and model priority.
      */
     @Override
-    public Pair<Double, Integer> getProbability(List<List<String>> usageNGrams, boolean forgetUsages) {
+    public @NotNull Pair<Double, Integer> getProbability(@NotNull List<List<String>> usageNGrams, boolean forgetUsages) {
         List<List<Integer>> allUsageNGramIndices = nGramToIndices(usageNGrams);
         if (forgetUsages) {
             allUsageNGramIndices.forEach(this::forgetUsage);
@@ -127,7 +132,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return new Pair<>(probability / usagePrioritiesSum, getModelPriority());
     }
 
-    private List<VarNamePrediction> rankUsagePredictions(List<VarNamePrediction> predictionList, int usagePrioritiesSum) {
+    private @NotNull List<VarNamePrediction> rankUsagePredictions(@NotNull List<VarNamePrediction> predictionList, int usagePrioritiesSum) {
         Map<String, Double> rankedPredictions = new HashMap<>();
         for (VarNamePrediction prediction : predictionList) {
             Double prob = rankedPredictions.get(prediction.getName());
@@ -173,7 +178,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
      * @param usageNGramIndices n-gram sequence.
      * @return pair of probability and usagePriority.
      */
-    private Pair<Double, Integer> getUsageProbability(List<Integer> usageNGramIndices) {
+    private @NotNull Pair<Double, Integer> getUsageProbability(List<Integer> usageNGramIndices) {
         int usagePriority = getUsagePriority(usageNGramIndices);
         double probability = toProb(myModel.modelAtIndex(usageNGramIndices, usageNGramIndices.size() - 1));
         return new Pair<>(probability, usagePriority);
@@ -257,7 +262,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
                 String.format("Time of training on %s: %d ms.",
                         project.getName(),
                         delta.toMillis()));
-        System.out.printf("Done in %s\n", delta.toString());
+        System.out.printf("Done in %s\n", delta);
         System.out.printf("Vocabulary size: %d\n", myVocabulary.size());
     }
 
@@ -271,7 +276,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         myModel.forget(myVocabulary.toIndices(lexPsiFile(file)));
     }
 
-    private List<String> lexPsiFile(@NotNull PsiFile file) {
+    private @NotNull List<String> lexPsiFile(@NotNull PsiFile file) {
         return SyntaxTraverser.psiTraverser()
                 .withRoot(file)
                 .onRange(new TextRange(0, 64 * 1024)) // first 128 KB of chars
@@ -300,7 +305,7 @@ public class IdNamesNGramModelRunner implements IdNamesSuggestingModelRunner {
         return prob * conf + (1 - conf) / myVocabulary.size();
     }
 
-    private static final Path MODEL_DIRECTORY = Paths.get(PathManager.getSystemPath(), "model");
+    private static final Path MODEL_DIRECTORY = Paths.get(PathManager.getSystemPath(), "org/jetbrains/astrid/model");
 
     public double save(@Nullable ProgressIndicator progressIndicator) {
         return save(MODEL_DIRECTORY, progressIndicator);

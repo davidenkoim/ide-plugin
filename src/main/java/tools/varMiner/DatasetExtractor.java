@@ -13,7 +13,7 @@ import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.PsiUtils;
+import org.jetbrains.id.names.suggesting.utils.PsiUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,8 +28,8 @@ import java.util.stream.Stream;
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
 import static java.lang.Math.abs;
-import static org.jetbrains.id.names.suggesting.PsiUtils.findReferences;
-import static org.jetbrains.id.names.suggesting.PsiUtils.processToken;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.findReferences;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.processToken;
 
 public class DatasetExtractor {
     public static final String TOKEN_DELIMITER = "\u2581";
@@ -68,7 +68,7 @@ public class DatasetExtractor {
                     System.out.printf(
                             "Status: %.0f%%;\tTime spent: %s;\tTime left: %s\r",
                             fraction * 100.0,
-                            timeSpent.toString(),
+                            timeSpent,
                             timeLeft.toString()
                     );
                 }

@@ -7,10 +7,10 @@ import com.intellij.psi.*;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.PsiUtils;
 import org.jetbrains.id.names.suggesting.VarNamePrediction;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
+import org.jetbrains.id.names.suggesting.utils.PsiUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.max;
-import static org.jetbrains.id.names.suggesting.PsiUtils.findReferences;
-import static org.jetbrains.id.names.suggesting.PsiUtils.isVariableOrReference;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.findReferences;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.isVariableOrReference;
 
 public abstract class NGramVariableNamesContributor implements VariableNamesContributor {
     public static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
@@ -44,7 +44,7 @@ public abstract class NGramVariableNamesContributor implements VariableNamesCont
     }
 
     @Override
-    public Pair<Double, Integer> getProbability(PsiVariable variable, boolean forgetUsages) {
+    public @NotNull Pair<Double, Integer> getProbability(@NotNull PsiVariable variable, boolean forgetUsages) {
         IdNamesNGramModelRunner modelRunner = getModelRunnerToContribute(variable);
         if (modelRunner == null || !isSupported(variable)) {
             return new Pair<>(0.0, 0);

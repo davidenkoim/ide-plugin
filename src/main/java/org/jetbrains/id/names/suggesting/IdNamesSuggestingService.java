@@ -8,13 +8,15 @@ import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
 import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor;
+import org.jetbrains.id.names.suggesting.naturalize.ProjectNaturalizeContributor;
+import org.jetbrains.id.names.suggesting.utils.NotificationsUtil;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.jetbrains.id.names.suggesting.PsiUtils.isColliding;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.isColliding;
 
 public class IdNamesSuggestingService {
     public static final int PREDICTION_CUTOFF = 10;
@@ -35,15 +37,21 @@ public class IdNamesSuggestingService {
             // toNanos because toMillis return long but I want it to be more precise, plus stats already has probability(p) which is anyway Double.
             stats.put("t (ms)", Duration.between(timerStart, end).toNanos() / 1_000_000.);
         }
-        int prioritiesSum = 0;
-        for (final VariableNamesContributor modelContributor : VariableNamesContributor.EP_NAME.getExtensions()) {
-            Instant start = Instant.now();
-            prioritiesSum += modelContributor.contribute(variable, nameSuggestions, isAllowedToForgetUsages(modelContributor));
-            end = Instant.now();
-            stats.put(String.format("%s (ms)",
-                    modelContributor.getClass().getSimpleName()),
-                    Duration.between(start, end).toNanos() / 1_000_000.);
-        }
+//        int prioritiesSum = 0;
+//        for (final VariableNamesContributor modelContributor : VariableNamesContributor.EP_NAME.getExtensions()) {
+//            Instant start = Instant.now();
+//            prioritiesSum += modelContributor.contribute(variable, nameSuggestions, isAllowedToForgetUsages(modelContributor));
+//            end = Instant.now();
+//            stats.put(String.format("%s (ms)",
+//                    modelContributor.getClass().getSimpleName()),
+//                    Duration.between(start, end).toNanos() / 1_000_000.);
+//        }
+//        For now plugin uses our implementation of NATURALIZE model. Later plugin will work with mixtures of models (like above).
+        int prioritiesSum = 1;
+        VariableNamesContributor contributor = VariableNamesContributor.EP_NAME.findExtension(ProjectNaturalizeContributor.class);
+        assert contributor != null;
+        prioritiesSum += contributor.contribute(variable, nameSuggestions, isAllowedToForgetUsages(contributor));
+
         LinkedHashMap<String, Double> result = rankSuggestions(variable, nameSuggestions, prioritiesSum);
         Instant timerEnd = Instant.now();
         stats.put("Total time (ms)", Duration.between(timerStart, timerEnd).toNanos() / 1_000_000.);

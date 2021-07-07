@@ -5,17 +5,17 @@ import com.intellij.psi.*;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.id.names.suggesting.PsiUtils;
 import org.jetbrains.id.names.suggesting.VarNamePrediction;
 import org.jetbrains.id.names.suggesting.api.VariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
+import org.jetbrains.id.names.suggesting.utils.PsiUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.jetbrains.id.names.suggesting.PsiUtils.findReferences;
-import static org.jetbrains.id.names.suggesting.PsiUtils.isVariableOrReference;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.findReferences;
+import static org.jetbrains.id.names.suggesting.utils.PsiUtils.isVariableOrReference;
 
 public abstract class NaturalizeContributor implements VariableNamesContributor {
     public static final List<Class<? extends PsiNameIdentifierOwner>> SUPPORTED_TYPES = new ArrayList<>();
@@ -34,12 +34,12 @@ public abstract class NaturalizeContributor implements VariableNamesContributor 
                 modelRunner.getModel(),
                 modelRunner.getVocabulary(),
                 modelRunner.getRememberedIdentifiers());
-        predictionList.addAll(naturalize.suggestNames(variable.getClass(), getContext(variable, true), forgetContext));
+        predictionList.addAll(naturalize.suggestNames(variable.getClass(), getContext(variable, false), forgetContext));
         return naturalize.getModelPriority();
     }
 
     @Override
-    public Pair<Double, Integer> getProbability(PsiVariable variable, boolean forgetContext) {
+    public @NotNull Pair<Double, Integer> getProbability(@NotNull PsiVariable variable, boolean forgetContext) {
         IdNamesNGramModelRunner modelRunner = getModelRunnerToContribute(variable);
         if (modelRunner == null || !isSupported(variable)) {
             return new Pair<>(0.0, 0);
@@ -57,7 +57,7 @@ public abstract class NaturalizeContributor implements VariableNamesContributor 
         return SUPPORTED_TYPES.stream().anyMatch(type -> type.isInstance(identifierOwner));
     }
 
-    private Context getContext(PsiVariable variable, boolean changeToUnknown) {
+    private @NotNull Context getContext(@NotNull PsiVariable variable, boolean changeToUnknown) {
         PsiElement root = findRoot(variable);
         List<Integer> varIdxs = new ArrayList<>();
         List<PsiElement> elements = SyntaxTraverser.psiTraverser()
@@ -66,25 +66,19 @@ public abstract class NaturalizeContributor implements VariableNamesContributor 
                 .filter(PsiUtils::shouldLex)
                 .toList();
         List<String> tokens = new ArrayList<>();
-        if (changeToUnknown) {
-            for (int i = 0; i < elements.size(); i++) {
-                PsiElement element = elements.get(i);
-                if (isVariableOrReference(variable, element)) {
-                    varIdxs.add(i);
-                    tokens.add(Vocabulary.unknownCharacter);
-                } else {
-                    tokens.add(element.getText());
-                }
-            }
-        } else {
-            for (PsiElement element : elements) {
+        for (int i = 0; i < elements.size(); i++) {
+            PsiElement element = elements.get(i);
+            if (isVariableOrReference(variable, element)) {
+                varIdxs.add(i);
+                tokens.add(changeToUnknown ? Vocabulary.unknownCharacter : element.getText());
+            } else {
                 tokens.add(element.getText());
             }
         }
         return new Context(tokens, varIdxs);
     }
 
-    private PsiElement findRoot(PsiVariable variable) {
+    private @NotNull PsiElement findRoot(@NotNull PsiVariable variable) {
         PsiFile file = variable.getContainingFile();
         Stream<PsiReference> elementUsages = findReferences(variable, file);
         List<Set<PsiElement>> parents = Stream.concat(Stream.of(variable), elementUsages)

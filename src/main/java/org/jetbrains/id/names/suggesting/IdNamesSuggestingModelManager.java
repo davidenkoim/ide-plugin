@@ -11,6 +11,7 @@ import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContrib
 import org.jetbrains.id.names.suggesting.contributors.NGramVariableNamesContributor;
 import org.jetbrains.id.names.suggesting.contributors.ProjectVariableNamesContributor;
 import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner;
+import org.jetbrains.id.names.suggesting.utils.NotificationsUtil;
 
 import java.util.HashMap;
 import java.util.Map;
