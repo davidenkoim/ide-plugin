@@ -78,7 +78,7 @@ class GraphVarNamer {
                 val filePath = file.path
                 val filePredictions = HashMap<String, List<VarNamePredictions>>()
                 val preds = predictPsiFile(psiFile)
-                if (preds === null) continue
+                if (preds === null || preds.isEmpty()) continue
                 filePredictions[filePath] = preds
                 FileOutputStream(predictionsFile, true).bufferedWriter().use {
                     it.write(mapper.writeValueAsString(filePredictions))

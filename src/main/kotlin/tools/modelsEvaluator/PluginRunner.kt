@@ -4,8 +4,6 @@ import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationStarter
 import com.intellij.openapi.project.Project
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager
-import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
-import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -28,7 +26,7 @@ class PluginRunner : ApplicationStarter {
             val saveDir = args[2]
             val ngramContributorType = args[3]
             if (ngramContributorType == "global") trainGlobalNGramModelOn(dataset, javaSmallTrain)
-            evaluateOn(dataset, javaSmallTest, Paths.get(saveDir, "test"), ngramContributorType)
+            evaluateOn(dataset, javaSmallTest, Paths.get(saveDir), ngramContributorType)
         } catch (e: IllegalArgumentException) {
             e.printStackTrace()
         } catch (e: OutOfMemoryError) {
@@ -44,8 +42,6 @@ class PluginRunner : ApplicationStarter {
     private fun trainGlobalNGramModelOn(dataset: File, projectList: List<String>) {
         println("Training global NGram model...")
         var projectToClose: Project? = null
-        val modelRunner = IdNamesSuggestingModelManager.getInstance()
-            .getModelRunner(GlobalVariableNamesContributor::class.java) as IdNamesNGramModelRunner
         for (projectDir in projectList) {
             val projectPath = dataset.resolve(projectDir)
             println("Opening project $projectDir...")

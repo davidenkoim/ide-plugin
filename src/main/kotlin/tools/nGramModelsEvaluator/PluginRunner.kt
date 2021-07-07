@@ -4,8 +4,6 @@ import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationStarter
 import com.intellij.openapi.project.Project
 import org.jetbrains.id.names.suggesting.IdNamesSuggestingModelManager
-import org.jetbrains.id.names.suggesting.contributors.GlobalVariableNamesContributor
-import org.jetbrains.id.names.suggesting.impl.IdNamesNGramModelRunner
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -13,7 +11,7 @@ import kotlin.system.exitProcess
 
 class PluginRunner : ApplicationStarter {
     private val javaSmallTrain = listOf(
-//        "cassandra", "elasticsearch", "gradle", "hibernate-orm",
+        "cassandra", "elasticsearch", "gradle", "hibernate-orm",
         "intellij-community",
         "liferay-portal", "presto", "spring-framework", "wildfly"
     )
@@ -46,8 +44,6 @@ class PluginRunner : ApplicationStarter {
     private fun trainGlobalNGramModelOn(dataset: File, projectList: List<String>) {
         println("Training global NGram model...")
         var projectToClose: Project? = null
-        val modelRunner = IdNamesSuggestingModelManager.getInstance()
-            .getModelRunner(GlobalVariableNamesContributor::class.java) as IdNamesNGramModelRunner
         for (projectDir in projectList) {
             val projectPath = dataset.resolve(projectDir)
             println("Opening project $projectDir...")
